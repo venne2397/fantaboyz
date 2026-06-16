@@ -85,6 +85,18 @@ tr:hover td{background:var(--sf2)}
 .bracket-round-title{text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;font-weight:600}
 .bracket-connector{width:20px;display:flex;flex-direction:column;justify-content:center;position:relative}
 .bracket-line{border-top:1px solid var(--bd);border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);height:50%;min-height:30px}
+
+.next-games{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:24px}
+.next-games h3{font-size:13px;color:var(--tx2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em}
+.next-game{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--bd2);margin-bottom:8px}
+.next-game:last-child{margin-bottom:0}
+.ng-countdown{font-family:var(--mn);font-size:13px;font-weight:700;color:var(--wa);min-width:70px;text-align:center}
+.ng-countdown.live{color:var(--ok);animation:pulse 1.5s infinite}
+.ng-teams{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px}
+.ng-vs{color:var(--tx3);font-size:10px;font-weight:600}
+.ng-player{font-size:9px;color:var(--wa);margin-left:2px}
+.ng-time{font-size:10px;color:var(--tx3);min-width:80px;text-align:right}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 </style>
 </head>
 <body>
@@ -98,6 +110,7 @@ tr:hover td{background:var(--sf2)}
     <button class="btn btn2" id="autoBtn" onclick="toggleAuto()">&#x23F0; Auto 5min</button>
     <span class="status s-er" id="badge">In attesa...</span>
   </div>
+  <div class="next-games" id="nextGames"></div>
   <div class="board" id="board"></div>
   <div class="tabs" id="tabs"></div>
   <div class="pnl show" id="p-det"></div>
@@ -296,9 +309,78 @@ function renderAll(){
   h+="</div>";
   document.getElementById("p-match").innerHTML=h;
   renderBracket();
+  renderNextGames();
   document.getElementById("upd").textContent="Ultimo aggiornamento: "+new Date().toLocaleString("it-IT")+" | Partite finite: "+MATCHES.filter(function(m){return m.finished;}).length+"/"+MATCHES.length;
 }
 
+
+
+function renderNextGames(){
+  var el=document.getElementById("nextGames");
+  if(MATCHES.length===0){el.innerHTML="";return;}
+  
+  var now=new Date();
+  var upcoming=[];
+  var live=[];
+  
+  for(var i=0;i<MATCHES.length;i++){
+    var m=MATCHES[i];
+    if(m.live){live.push(m);continue;}
+    if(m.finished) continue;
+    if(!m.date) continue;
+    var d=new Date(m.date);
+    if(isNaN(d.getTime())) continue;
+    if(d>now) upcoming.push({match:m,date:d});
+  }
+  
+  upcoming.sort(function(a,b){return a.date-b.date;});
+  
+  var show=live.concat(upcoming.slice(0,4).map(function(u){return u.match;}));
+  if(show.length===0){el.innerHTML="";return;}
+  
+  var h='<h3>Prossime Partite</h3>';
+  for(var i=0;i<show.length;i++){
+    var m=show[i];
+    var ho=findOwner(m.home),ao=findOwner(m.away);
+    var hf=ho?flag(ho.team.f):"";
+    var af=ao?flag(ao.team.f):"";
+    var countdown="";
+    var timeStr="";
+    
+    if(m.live){
+      countdown='<span class="ng-countdown live">LIVE</span>';
+      timeStr="In corso";
+    }else{
+      var d=new Date(m.date);
+      var diff=d-now;
+      if(diff>0){
+        var hours=Math.floor(diff/3600000);
+        var mins=Math.floor((diff%3600000)/60000);
+        if(hours>24){
+          var days=Math.floor(hours/24);
+          countdown='<span class="ng-countdown">'+days+'g '+Math.floor(hours%24)+'h</span>';
+        }else{
+          countdown='<span class="ng-countdown">'+hours+'h '+mins+'m</span>';
+        }
+        timeStr=d.toLocaleString("it-IT",{weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+      }
+    }
+    
+    h+='<div class="next-game">';
+    h+=countdown;
+    h+='<div class="ng-teams">';
+    h+='<span'+(ho?' class="owned"':'')+'>'+hf+m.home+(ho?'<span class="ng-player">('+ho.player+')</span>':'')+'</span>';
+    h+='<span class="ng-vs">vs</span>';
+    h+='<span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<span class="ng-player">('+ao.player+')</span>':'')+'</span>';
+    h+='</div>';
+    h+='<span class="ng-time">'+timeStr+'</span>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+
+// Update countdown every minute
+setInterval(function(){if(MATCHES.length>0)renderNextGames();},60000);
 
 function renderBracket(){
   var el=document.getElementById("p-bracket");
@@ -415,6 +497,7 @@ try{
 document.getElementById("tabs").innerHTML='<button class="tab on" onclick="switchTab(\'det\',this)">Classifica</button><button class="tab" onclick="switchTab(\'match\',this)">Partite</button><button class="tab" onclick="switchTab(\'bracket\',this)">Eliminazione</button><button class="tab" onclick="switchTab(\'rules\',this)">Regole</button>';
 renderRules();
 renderBracket();
+renderNextGames();
 // Show empty board
 var h="";for(var i=0;i<keys.length;i++){h+='<div class="cd"><span class="rk">#'+(i+1)+'</span><div class="nm">'+keys[i]+'</div><div class="pt">0.0</div><div class="lb">punti</div></div>';}
 document.getElementById("board").innerHTML=h;
