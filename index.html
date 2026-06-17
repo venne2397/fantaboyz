@@ -160,6 +160,7 @@ td{padding:6px}
     <button class="btn btn2" id="autoBtn" onclick="toggleAuto()">&#x23F0; Auto 5min</button>
     <span class="status s-er" id="badge">In attesa...</span>
   </div>
+  <div class="next-games" id="liveGames" style="display:none"></div>
   <div class="next-games" id="nextGames"></div>
   <div class="board" id="board"></div>
   <div class="tabs" id="tabs"></div>
@@ -237,7 +238,7 @@ function findOwner(name){
 }
 
 function parseWorldcup26(data){
-  // worldcup26.ir format: array of game objects
+  // worldcup26.ir format
   var matches=[];
   var games=data.games||data.data||(Array.isArray(data)?data:[]);
   for(var i=0;i<games.length;i++){
@@ -248,18 +249,30 @@ function parseWorldcup26(data){
     var ag=g.away_score!=null?parseInt(g.away_score):null;
     if(isNaN(hg)) hg=null;
     if(isNaN(ag)) ag=null;
-    var status=g.finished||g.time_elapsed||g.status||"";
     var stage=g.type||g.round||"group";
-    var isFinished=(status==="TRUE"||status==="true"||status==="finished"||status==="FT");
-    var isLive=(status==="1H"||status==="2H"||status==="HT"||status==="live"||status==="playing"||status==="ET"||status==="P"||status==="LIVE"||status==="in_progress");
     var date=g.datetime||g.local_date||g.date||g.utc_date||"";
+    
+    // Determine match status
+    var finStr=(g.finished||"").toString().toUpperCase();
+    var timeEl=(g.time_elapsed||"").toString().toLowerCase();
+    var isFinished=(finStr==="TRUE"||timeEl==="finished"||timeEl==="ft");
+    var isLive=false;
+    if(!isFinished){
+      // Game is live if: not finished AND (has a time_elapsed value that indicates play, OR has scores)
+      if(timeEl&&timeEl!=="null"&&timeEl!==""&&timeEl!=="false"&&timeEl!=="not_started"&&timeEl!=="scheduled"){
+        isLive=true;
+      } else if(hg!==null&&ag!==null&&finStr==="FALSE"){
+        // Has scores but not finished = probably live
+        isLive=true;
+      }
+    }
+    
     if(home&&away){
-      matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date});
+      matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date,timeElapsed:timeEl});
     }
   }
   return matches;
 }
-
 function parseFootballdata(data){
   var matches=[];
   var games=data.matches||[];
@@ -369,7 +382,7 @@ function renderAll(){
   // Matches
   var ms=MATCHES.slice().sort(function(a,b){if(a.live&&!b.live)return -1;if(!a.live&&b.live)return 1;return(new Date(b.date||0))-(new Date(a.date||0));});
   h="<h2>Partite ("+MATCHES.length+")</h2><div class='matchlist'>";
-  for(var i=0;i<Math.min(ms.length,80);i++){var m=ms[i];var ho=findOwner(m.home),ao=findOwner(m.away);var hs=m.hg!==null?m.hg:"-";var as2=m.ag!==null?m.ag:"-";var stl=m.live?"LIVE":(m.finished?"FT":"--");var hf=ho?flag(ho.team.f):(flagForTeam(m.home)?flag(flagForTeam(m.home)):"");var af=ao?flag(ao.team.f):(flagForTeam(m.away)?flag(flagForTeam(m.away)):"");
+  for(var i=0;i<Math.min(ms.length,80);i++){var m=ms[i];var ho=findOwner(m.home),ao=findOwner(m.away);var hs=m.hg!==null?m.hg:"-";var as2=m.ag!==null?m.ag:"-";var stl=m.live?(m.timeElapsed||"LIVE"):(m.finished?"FT":"--");var hf=ho?flag(ho.team.f):(flagForTeam(m.home)?flag(flagForTeam(m.home)):"");var af=ao?flag(ao.team.f):(flagForTeam(m.away)?flag(flagForTeam(m.away)):"");
     h+='<div class="match'+(m.live?" live":"")+'"><span class="mdate">'+(m.stage||"").replace(/_/g," ").substring(0,10)+'</span><div class="mteams"><span'+(ho?' class="owned"':'')+'>'+hf+m.home+(ho?'<small class="powner"> ('+ho.player+')</small>':'')+'</span><span class="mscore">'+hs+' - '+as2+'</span><span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<small class="powner"> ('+ao.player+')</small>':'')+'</span></div><span class="mst'+(m.live?" live":"")+'">'+stl+'</span></div>';}
   h+="</div>";
   document.getElementById("p-match").innerHTML=h;
@@ -381,8 +394,9 @@ function renderAll(){
 
 
 function renderNextGames(){
-  var el=document.getElementById("nextGames");
-  if(MATCHES.length===0){el.innerHTML="";return;}
+  var liveEl=document.getElementById("liveGames");
+  var nextEl=document.getElementById("nextGames");
+  if(MATCHES.length===0){liveEl.style.display="none";nextEl.innerHTML="";return;}
   
   var now=new Date();
   var upcoming=[];
@@ -390,20 +404,10 @@ function renderNextGames(){
   
   function parseMatchDate(dateStr){
     if(!dateStr) return null;
-    // Handle MM/DD/YYYY HH:MM format (from worldcup26.ir) - times are US Eastern (UTC-4)
     var m2=dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
-    if(m2){
-      var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+4,parseInt(m2[5]));
-      return new Date(utcMs);
-    }
-    // Handle ISO format with T - treat as UTC
-    if(dateStr.indexOf("T")>=0){
-      var d=new Date(dateStr);
-      if(!isNaN(d.getTime())) return d;
-    }
-    // Fallback
-    var d=new Date(dateStr);
-    if(!isNaN(d.getTime())) return d;
+    if(m2){var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+4,parseInt(m2[5]));return new Date(utcMs);}
+    if(dateStr.indexOf("T")>=0){var d=new Date(dateStr);if(!isNaN(d.getTime()))return d;}
+    var d=new Date(dateStr);if(!isNaN(d.getTime()))return d;
     return null;
   }
   
@@ -416,47 +420,45 @@ function renderNextGames(){
     if(!d) continue;
     if(d>now) upcoming.push({match:m,date:d});
   }
-  
   upcoming.sort(function(a,b){return a.date-b.date;});
-  
-  var showLive=live.slice();
-  var showUpcoming=upcoming.slice(0,4).map(function(u){return u.match;});
-  
-  if(showLive.length===0&&showUpcoming.length===0){el.innerHTML="";return;}
-  
-  var h="";
-  
-  // LIVE SECTION
-  if(showLive.length>0){
-    h+='<h3>\u26BD In Corso</h3>';
-    for(var i=0;i<showLive.length;i++){
-      var m=showLive[i];
+
+  // === LIVE SECTION ===
+  if(live.length>0){
+    liveEl.style.display="block";
+    var h='<h3 style="color:var(--ok)">\u26BD Partite in Corso</h3>';
+    for(var i=0;i<live.length;i++){
+      var m=live[i];
       var ho=findOwner(m.home),ao=findOwner(m.away);
       var hf=ho?flag(ho.team.f):"";
       var af=ao?flag(ao.team.f):"";
       var score=(m.hg!=null&&m.ag!=null)?m.hg+" - "+m.ag:"0 - 0";
       h+='<div class="next-game" style="border-color:var(--ok);border-width:2px">';
-      h+='<span class="ng-countdown live">LIVE</span>';
+      h+='<span class="ng-countdown live">\u25CF LIVE</span>';
       h+='<div class="ng-teams">';
       h+='<span'+(ho?' class="owned"':'')+'>'+hf+m.home+(ho?'<span class="ng-player">('+ho.player+')</span>':'')+'</span>';
-      h+='<span class="ng-vs" style="font-size:14px;font-weight:700;color:var(--tx)">'+score+'</span>';
+      h+='<span class="ng-vs" style="font-size:16px;font-weight:800;color:var(--tx);font-family:var(--mn)">'+score+'</span>';
       h+='<span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<span class="ng-player">('+ao.player+')</span>':'')+'</span>';
       h+='</div>';
-      h+='<span class="ng-time" style="color:var(--ok)">\u25CF Live</span>';
+      h+='<span class="ng-time" style="color:var(--ok)">'+(m.timeElapsed||"Live")+'</span>';
       h+='</div>';
     }
+    liveEl.innerHTML=h;
+  }else{
+    liveEl.style.display="none";
+    liveEl.innerHTML="";
   }
-  
-  // UPCOMING SECTION
+
+  // === UPCOMING SECTION ===
+  var showUpcoming=upcoming.slice(0,5);
   if(showUpcoming.length>0){
-    h+='<h3>\u23F3 Prossime Partite</h3>';
+    var h='<h3>\u23F3 Prossime Partite</h3>';
     for(var i=0;i<showUpcoming.length;i++){
-      var m=showUpcoming[i];
+      var m=showUpcoming[i].match;
+      var d=showUpcoming[i].date;
       var ho=findOwner(m.home),ao=findOwner(m.away);
       var hf=ho?flag(ho.team.f):"";
       var af=ao?flag(ao.team.f):"";
       
-      var d=parseMatchDate(m.date);
       var diff=d-now;
       var countdown="";
       if(diff>0){
@@ -471,8 +473,6 @@ function renderNextGames(){
           countdown='<span class="ng-countdown" style="color:var(--ok)">'+mins+' min</span>';
         }
       }
-      
-      // Show time in user's local timezone
       var timeStr=d.toLocaleString(undefined,{weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
       
       h+='<div class="next-game">';
@@ -485,8 +485,10 @@ function renderNextGames(){
       h+='<span class="ng-time">'+timeStr+'</span>';
       h+='</div>';
     }
+    nextEl.innerHTML=h;
+  }else{
+    nextEl.innerHTML="";
   }
-  el.innerHTML=h;
 }
 // Update countdown every minute
 setInterval(function(){if(MATCHES.length>0)renderNextGames();},60000);
