@@ -390,11 +390,19 @@ function renderNextGames(){
   
   function parseMatchDate(dateStr){
     if(!dateStr) return null;
-    // Handle MM/DD/YYYY HH:MM format (from worldcup26.ir)
+    // Handle MM/DD/YYYY HH:MM format (from worldcup26.ir) - times are US Eastern (UTC-4)
     var m2=dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
-    if(m2) return new Date(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4]),parseInt(m2[5]));
-    // Handle ISO format - parse as-is (local time)
-    var d=new Date(dateStr.replace("T"," ").replace("Z",""));
+    if(m2){
+      var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+4,parseInt(m2[5]));
+      return new Date(utcMs);
+    }
+    // Handle ISO format with T - treat as UTC
+    if(dateStr.indexOf("T")>=0){
+      var d=new Date(dateStr);
+      if(!isNaN(d.getTime())) return d;
+    }
+    // Fallback
+    var d=new Date(dateStr);
     if(!isNaN(d.getTime())) return d;
     return null;
   }
