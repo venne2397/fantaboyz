@@ -251,8 +251,8 @@ function parseWorldcup26(data){
     var status=g.finished||g.time_elapsed||g.status||"";
     var stage=g.type||g.round||"group";
     var isFinished=(status==="TRUE"||status==="true"||status==="finished"||status==="FT");
-    var isLive=(status==="1H"||status==="2H"||status==="HT"||status==="live"||status==="playing");
-    var date=g.local_date||g.date||"";
+    var isLive=(status==="1H"||status==="2H"||status==="HT"||status==="live"||status==="playing"||status==="ET"||status==="P"||status==="LIVE"||status==="in_progress");
+    var date=g.datetime||g.local_date||g.date||g.utc_date||"";
     if(home&&away){
       matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date});
     }
@@ -393,57 +393,99 @@ function renderNextGames(){
     if(m.live){live.push(m);continue;}
     if(m.finished) continue;
     if(!m.date) continue;
-    var d=new Date(m.date);
+    // Parse date - if no timezone indicator, treat as UTC
+    var dateStr=m.date;
+    var d;
+    if(dateStr.indexOf("Z")<0&&dateStr.indexOf("+")<0&&dateStr.indexOf("T")>=0&&!/\d{2}:\d{2}:\d{2}-/.test(dateStr)){
+      d=new Date(dateStr+"Z");
+    } else if(dateStr.indexOf("T")<0&&dateStr.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/)){
+      d=new Date(dateStr.replace(" ","T")+"Z");
+    } else {
+      d=new Date(dateStr);
+    }
     if(isNaN(d.getTime())) continue;
     if(d>now) upcoming.push({match:m,date:d});
   }
   
   upcoming.sort(function(a,b){return a.date-b.date;});
   
-  var show=live.concat(upcoming.slice(0,4).map(function(u){return u.match;}));
-  if(show.length===0){el.innerHTML="";return;}
+  // Show live first, then next 4 upcoming
+  var showLive=live.slice();
+  var showUpcoming=upcoming.slice(0,4).map(function(u){return u.match;});
   
-  var h='<h3>Prossime Partite</h3>';
-  for(var i=0;i<show.length;i++){
-    var m=show[i];
-    var ho=findOwner(m.home),ao=findOwner(m.away);
-    var hf=ho?flag(ho.team.f):"";
-    var af=ao?flag(ao.team.f):"";
-    var countdown="";
-    var timeStr="";
-    
-    if(m.live){
-      countdown='<span class="ng-countdown live">LIVE</span>';
-      timeStr="In corso";
-    }else{
-      var d=new Date(m.date);
+  if(showLive.length===0&&showUpcoming.length===0){el.innerHTML="";return;}
+  
+  var h="";
+  
+  // LIVE SECTION
+  if(showLive.length>0){
+    h+='<h3>\u26BD In Corso</h3>';
+    for(var i=0;i<showLive.length;i++){
+      var m=showLive[i];
+      var ho=findOwner(m.home),ao=findOwner(m.away);
+      var hf=ho?flag(ho.team.f):"";
+      var af=ao?flag(ao.team.f):"";
+      var score=(m.hg!=null&&m.ag!=null)?m.hg+" - "+m.ag:"0 - 0";
+      h+='<div class="next-game" style="border-color:var(--ok);border-width:2px">';
+      h+='<span class="ng-countdown live">LIVE</span>';
+      h+='<div class="ng-teams">';
+      h+='<span'+(ho?' class="owned"':'')+'>'+hf+m.home+(ho?'<span class="ng-player">('+ho.player+')</span>':'')+'</span>';
+      h+='<span class="ng-vs" style="font-size:13px;font-weight:700;color:var(--tx)">'+score+'</span>';
+      h+='<span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<span class="ng-player">('+ao.player+')</span>':'')+'</span>';
+      h+='</div>';
+      h+='<span class="ng-time" style="color:var(--ok)">\u25CF Live</span>';
+      h+='</div>';
+    }
+  }
+  
+  // UPCOMING SECTION
+  if(showUpcoming.length>0){
+    h+='<h3>\u23F3 Prossime Partite</h3>';
+    for(var i=0;i<showUpcoming.length;i++){
+      var m=showUpcoming[i];
+      var ho=findOwner(m.home),ao=findOwner(m.away);
+      var hf=ho?flag(ho.team.f):"";
+      var af=ao?flag(ao.team.f):"";
+      // Parse date same way
+      var dateStr=m.date;
+      var d;
+      if(dateStr.indexOf("Z")<0&&dateStr.indexOf("+")<0&&dateStr.indexOf("T")>=0&&!/\d{2}:\d{2}:\d{2}-/.test(dateStr)){
+        d=new Date(dateStr+"Z");
+      } else if(dateStr.indexOf("T")<0&&dateStr.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/)){
+        d=new Date(dateStr.replace(" ","T")+"Z");
+      } else {
+        d=new Date(dateStr);
+      }
+      
       var diff=d-now;
+      var countdown="";
       if(diff>0){
         var hours=Math.floor(diff/3600000);
         var mins=Math.floor((diff%3600000)/60000);
-        if(hours>24){
+        if(hours>=24){
           var days=Math.floor(hours/24);
           countdown='<span class="ng-countdown">'+days+'g '+Math.floor(hours%24)+'h</span>';
         }else{
           countdown='<span class="ng-countdown">'+hours+'h '+mins+'m</span>';
         }
-        timeStr=d.toLocaleString("it-IT",{weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
       }
+      
+      // Show in user's local timezone
+      var timeStr=d.toLocaleString(undefined,{weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+      
+      h+='<div class="next-game">';
+      h+=countdown;
+      h+='<div class="ng-teams">';
+      h+='<span'+(ho?' class="owned"':'')+'>'+hf+m.home+(ho?'<span class="ng-player">('+ho.player+')</span>':'')+'</span>';
+      h+='<span class="ng-vs">vs</span>';
+      h+='<span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<span class="ng-player">('+ao.player+')</span>':'')+'</span>';
+      h+='</div>';
+      h+='<span class="ng-time">'+timeStr+'</span>';
+      h+='</div>';
     }
-    
-    h+='<div class="next-game">';
-    h+=countdown;
-    h+='<div class="ng-teams">';
-    h+='<span'+(ho?' class="owned"':'')+'>'+hf+m.home+(ho?'<span class="ng-player">('+ho.player+')</span>':'')+'</span>';
-    h+='<span class="ng-vs">vs</span>';
-    h+='<span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<span class="ng-player">('+ao.player+')</span>':'')+'</span>';
-    h+='</div>';
-    h+='<span class="ng-time">'+timeStr+'</span>';
-    h+='</div>';
   }
   el.innerHTML=h;
 }
-
 // Update countdown every minute
 setInterval(function(){if(MATCHES.length>0)renderNextGames();},60000);
 
