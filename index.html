@@ -7,7 +7,7 @@
 <style>
 :root{--bg:#0a0e1a;--bg2:#131929;--sf:#1a2236;--sf2:#222d44;--tx:#e8ecf4;--tx2:#9ba8c2;--tx3:#5e6d87;--bd:#2a3650;--bd2:#1e2a40;--pr:#4f8cff;--ok:#34d399;--er:#f87171;--wa:#fbbf24;--gd:#ffd700;--sv:#c0c0c0;--bz:#cd7f32;--fn:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--mn:'SF Mono',Consolas,monospace}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--tx);font-family:var(--fn);padding:20px;min-height:100vh}
+body{background:var(--bg);color:var(--tx);font-family:var(--fn);padding:20px;min-height:100vh;-webkit-text-size-adjust:100%;touch-action:manipulation}
 .ctr{max-width:1100px;margin:0 auto}
 .hdr{text-align:center;margin-bottom:28px;padding:28px 20px;background:linear-gradient(135deg,var(--sf),var(--bg2));border-radius:16px;border:1px solid var(--bd)}
 .hdr h1{font-size:2rem;font-weight:700;background:linear-gradient(135deg,var(--pr),var(--ok));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
@@ -59,7 +59,57 @@ tr:hover td{background:var(--sf2)}
 .upd{text-align:center;font-size:11px;color:var(--tx3);margin-top:14px;padding:8px;background:var(--sf);border-radius:8px;border:1px solid var(--bd)}
 .log{font-size:10px;color:var(--tx3);margin-top:8px;padding:8px;background:var(--bg);border-radius:6px;max-height:60px;overflow-y:auto;font-family:var(--mn)}
 .matchlist{max-height:500px;overflow-y:auto}
-@media(max-width:768px){body{padding:10px}.hdr h1{font-size:1.5rem}.board{grid-template-columns:repeat(2,1fr);gap:8px}.pt{font-size:22px}.ctrl{flex-direction:column;align-items:stretch}}
+@media(max-width:768px){
+body{padding:8px}
+.hdr{padding:16px 12px;margin-bottom:16px}
+.hdr h1{font-size:1.3rem}
+.hdr h1 img{height:32px!important}
+.hdr p{font-size:11px}
+.board{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.cd{padding:12px 8px}
+.pt{font-size:20px}
+.nm{font-size:13px}
+.rk{font-size:10px;top:5px;left:6px}
+.ctrl{flex-direction:column;align-items:stretch;gap:8px;padding:12px}
+.tabs{overflow-x:auto;flex-wrap:nowrap}
+.tab{font-size:11px;padding:8px 6px;white-space:nowrap}
+.pnl{padding:14px;margin-bottom:14px}
+.pnl h2{font-size:14px}
+.pnl h3{font-size:12px}
+table{font-size:11px}
+th{font-size:9px;padding:5px 6px}
+td{padding:6px}
+.match{padding:8px 10px;gap:6px;flex-wrap:wrap}
+.mteams{font-size:11px;gap:6px}
+.mscore{font-size:13px;min-width:36px}
+.mdate{font-size:9px;min-width:40px}
+.mst{font-size:9px;min-width:40px}
+.powner{display:block;margin-left:0}
+.next-games{padding:12px}
+.next-game{flex-wrap:wrap;gap:6px;padding:8px 10px}
+.ng-teams{font-size:11px;gap:5px;flex-wrap:wrap;justify-content:center}
+.ng-countdown{font-size:11px;min-width:55px}
+.ng-time{font-size:9px;min-width:auto;width:100%;text-align:center;margin-top:4px}
+.brk{grid-template-columns:1fr}
+.bi{padding:6px 10px}
+.bl{font-size:10px}
+.bracket{padding:10px 0}
+.bracket-container{overflow-x:auto}
+.bracket-match{min-width:140px;padding:6px 8px;font-size:10px}
+.emoji-modal{max-width:280px;padding:16px}
+.emoji-grid{grid-template-columns:repeat(6,1fr)}
+.emoji-opt{font-size:18px;padding:4px}
+.log{font-size:9px}
+.upd{font-size:10px}
+}
+@media(max-width:380px){
+.board{grid-template-columns:repeat(2,1fr);gap:6px}
+.cd{padding:10px 6px}
+.pt{font-size:18px}
+.nm{font-size:11px}
+.tabs{gap:1px}
+.tab{font-size:10px;padding:7px 4px}
+}
 
 .emoji-btn{cursor:pointer;font-size:18px;padding:2px 4px;border-radius:4px;border:1px solid transparent;transition:all .1s}
 .emoji-btn:hover{border-color:var(--pr);background:var(--sf2)}
@@ -158,6 +208,19 @@ var APIS=[
 
 function log(msg){var el=document.getElementById("log");el.textContent=new Date().toLocaleTimeString("it-IT")+" - "+msg+"\n"+el.textContent;}
 
+var TEAM_ALIASES={
+"Korea Republic":["south korea","korea","korea rep"],
+"Ivory Coast":["cote divoire","cte divoire","ivory coast"],
+"United States":["usa","united states","us"],
+"Czechia":["czech republic","czechia"],
+"Bosnia-Herzegovina":["bosnia and herzegovina","bosnia","bosnia herzegovina"],
+"Congo DR":["dr congo","congo","democratic republic of congo"],
+"Cape Verde":["cabo verde","cape verde"],
+"Turkey":["turkiye","trkiye"],
+"Curacao":["curaao","curacao"],
+"New Zealand":["new zealand","nz"]
+};
+
 function findOwner(name){
   if(!name) return null;
   var ln=name.toLowerCase().replace(/[^a-z\s]/g,"").trim();
@@ -166,6 +229,8 @@ function findOwner(name){
     for(var j=0;j<teams.length;j++){
       var tn=teams[j].n.toLowerCase().replace(/[^a-z\s]/g,"").trim();
       if(tn===ln||ln.indexOf(tn)>=0||tn.indexOf(ln)>=0) return{player:keys[i],team:teams[j]};
+      var aliases=TEAM_ALIASES[teams[j].n];
+      if(aliases){for(var a=0;a<aliases.length;a++){if(aliases[a]===ln||ln.indexOf(aliases[a])>=0||aliases[a].indexOf(ln)>=0) return{player:keys[i],team:teams[j]};}}
     }
   }
   return null;
