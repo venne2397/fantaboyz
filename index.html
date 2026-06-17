@@ -254,19 +254,15 @@ function parseWorldcup26(data){
     
     // Determine match status
     var finStr=(g.finished||"").toString().toUpperCase();
-    var timeEl=(g.time_elapsed||"").toString().toLowerCase();
+    var timeEl=(g.time_elapsed||"").toString().toLowerCase().trim();
     var isFinished=(finStr==="TRUE"||timeEl==="finished"||timeEl==="ft");
     var isLive=false;
-    if(!isFinished){
-      // Game is live if: not finished AND (has a time_elapsed value that indicates play, OR has scores)
-      if(timeEl&&timeEl!=="null"&&timeEl!==""&&timeEl!=="false"&&timeEl!=="not_started"&&timeEl!=="scheduled"){
-        isLive=true;
-      } else if(hg!==null&&ag!==null&&finStr==="FALSE"){
-        // Has scores but not finished = probably live
+    if(!isFinished&&timeEl){
+      // Only live if time_elapsed indicates active play (contains a minute number, or HT/ET/PEN)
+      if(/\d/.test(timeEl)||timeEl==="ht"||timeEl==="et"||timeEl==="pen"||timeEl==="p"||timeEl==="1h"||timeEl==="2h"){
         isLive=true;
       }
     }
-    
     if(home&&away){
       matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date,timeElapsed:timeEl});
     }
