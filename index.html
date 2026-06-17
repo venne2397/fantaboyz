@@ -388,28 +388,29 @@ function renderNextGames(){
   var upcoming=[];
   var live=[];
   
+  function parseMatchDate(dateStr){
+    if(!dateStr) return null;
+    // Handle MM/DD/YYYY HH:MM format (from worldcup26.ir)
+    var m2=dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+    if(m2) return new Date(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4]),parseInt(m2[5]));
+    // Handle ISO format - parse as-is (local time)
+    var d=new Date(dateStr.replace("T"," ").replace("Z",""));
+    if(!isNaN(d.getTime())) return d;
+    return null;
+  }
+  
   for(var i=0;i<MATCHES.length;i++){
     var m=MATCHES[i];
     if(m.live){live.push(m);continue;}
     if(m.finished) continue;
     if(!m.date) continue;
-    // Parse date - if no timezone indicator, treat as UTC
-    var dateStr=m.date;
-    var d;
-    if(dateStr.indexOf("Z")<0&&dateStr.indexOf("+")<0&&dateStr.indexOf("T")>=0&&!/\d{2}:\d{2}:\d{2}-/.test(dateStr)){
-      d=new Date(dateStr+"Z");
-    } else if(dateStr.indexOf("T")<0&&dateStr.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/)){
-      d=new Date(dateStr.replace(" ","T")+"Z");
-    } else {
-      d=new Date(dateStr);
-    }
-    if(isNaN(d.getTime())) continue;
+    var d=parseMatchDate(m.date);
+    if(!d) continue;
     if(d>now) upcoming.push({match:m,date:d});
   }
   
   upcoming.sort(function(a,b){return a.date-b.date;});
   
-  // Show live first, then next 4 upcoming
   var showLive=live.slice();
   var showUpcoming=upcoming.slice(0,4).map(function(u){return u.match;});
   
@@ -430,7 +431,7 @@ function renderNextGames(){
       h+='<span class="ng-countdown live">LIVE</span>';
       h+='<div class="ng-teams">';
       h+='<span'+(ho?' class="owned"':'')+'>'+hf+m.home+(ho?'<span class="ng-player">('+ho.player+')</span>':'')+'</span>';
-      h+='<span class="ng-vs" style="font-size:13px;font-weight:700;color:var(--tx)">'+score+'</span>';
+      h+='<span class="ng-vs" style="font-size:14px;font-weight:700;color:var(--tx)">'+score+'</span>';
       h+='<span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<span class="ng-player">('+ao.player+')</span>':'')+'</span>';
       h+='</div>';
       h+='<span class="ng-time" style="color:var(--ok)">\u25CF Live</span>';
@@ -446,17 +447,8 @@ function renderNextGames(){
       var ho=findOwner(m.home),ao=findOwner(m.away);
       var hf=ho?flag(ho.team.f):"";
       var af=ao?flag(ao.team.f):"";
-      // Parse date same way
-      var dateStr=m.date;
-      var d;
-      if(dateStr.indexOf("Z")<0&&dateStr.indexOf("+")<0&&dateStr.indexOf("T")>=0&&!/\d{2}:\d{2}:\d{2}-/.test(dateStr)){
-        d=new Date(dateStr+"Z");
-      } else if(dateStr.indexOf("T")<0&&dateStr.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/)){
-        d=new Date(dateStr.replace(" ","T")+"Z");
-      } else {
-        d=new Date(dateStr);
-      }
       
+      var d=parseMatchDate(m.date);
       var diff=d-now;
       var countdown="";
       if(diff>0){
@@ -465,12 +457,14 @@ function renderNextGames(){
         if(hours>=24){
           var days=Math.floor(hours/24);
           countdown='<span class="ng-countdown">'+days+'g '+Math.floor(hours%24)+'h</span>';
-        }else{
+        }else if(hours>0){
           countdown='<span class="ng-countdown">'+hours+'h '+mins+'m</span>';
+        }else{
+          countdown='<span class="ng-countdown" style="color:var(--ok)">'+mins+' min</span>';
         }
       }
       
-      // Show in user's local timezone
+      // Show time in user's local timezone
       var timeStr=d.toLocaleString(undefined,{weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
       
       h+='<div class="next-game">';
