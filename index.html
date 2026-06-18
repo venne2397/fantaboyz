@@ -257,8 +257,11 @@ function parseWorldcup26(data){
     var timeEl=(g.time_elapsed||"").toString().toLowerCase().trim();
     var isFinished=(finStr==="TRUE"||timeEl==="finished"||timeEl==="ft"||timeEl==="full time"||timeEl==="full-time"||timeEl==="aet");
     var isLive=false;
-    if(!isFinished&&timeEl&&timeEl!=="null"&&timeEl!=="not_started"&&timeEl!=="scheduled"&&timeEl!=="false"&&timeEl!=="tbd"&&timeEl!=="postponed"&&timeEl!=="cancelled"){
-      isLive=true;
+    if(!isFinished){
+      // WHITELIST: only live if time_elapsed shows actual play time
+      if(/[1-9]/.test(timeEl)||timeEl==="ht"||timeEl==="et"||timeEl==="pen"||timeEl==="half time"||timeEl==="extra time"||timeEl==="penalties"){
+        isLive=true;
+      }
     }
     if(home&&away){
       matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date,timeElapsed:timeEl});
@@ -325,7 +328,9 @@ function calcPoints(){
   for(var i=0;i<keys.length;i++){scores[keys[i]]=0;det[keys[i]]=[];}
   for(var i=0;i<MATCHES.length;i++){
     var m=MATCHES[i];
-    if((!m.finished&&!m.live)||m.hg===null||m.ag===null) continue;
+    if(!m.finished&&!m.live) continue;
+    if(m.hg===null||m.ag===null) continue;
+    if(m.live&&m.hg===0&&m.ag===0) continue;
     var isProv=m.live&&!m.finished;
     var isGroup=(m.stage||"").toLowerCase().indexOf("group")>=0||(m.stage||"").toLowerCase()==="group_stage";
     if(isGroup){
