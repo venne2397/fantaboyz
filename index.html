@@ -449,7 +449,14 @@ function renderNextGames(){
   var showUpcoming=upcoming.slice(0,5);
   if(showUpcoming.length>0){
     var h='<h3>\u23F3 Prossime Partite</h3>';
-    for(var i=0;i<showUpcoming.length;i++){
+    
+    // DEBUG: Show raw date from API for first upcoming match
+    if(showUpcoming.length>0){
+      var dm=showUpcoming[0].match;
+      console.log("DEBUG upcoming[0]:",JSON.stringify(dm));
+      h+='<div style="font-size:10px;color:#888;padding:4px">DEBUG: raw date="'+dm.date+'" | parsed='+showUpcoming[0].date.toISOString()+'</div>';
+    }
+for(var i=0;i<showUpcoming.length;i++){
       var m=showUpcoming[i].match;
       var d=showUpcoming[i].date;
       var ho=findOwner(m.home),ao=findOwner(m.away);
