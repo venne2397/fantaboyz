@@ -257,8 +257,7 @@ function parseWorldcup26(data){
     var timeEl=(g.time_elapsed||"").toString().toLowerCase().trim();
     var isFinished=(finStr==="TRUE"||timeEl==="finished"||timeEl==="ft"||timeEl==="full time"||timeEl==="full-time"||timeEl==="aet");
     var isLive=false;
-    if(!isFinished&&timeEl){
-      // Any non-empty time_elapsed on a non-finished game = LIVE
+    if(!isFinished&&timeEl&&timeEl!=="null"&&timeEl!=="not_started"&&timeEl!=="scheduled"&&timeEl!=="false"&&timeEl!=="tbd"&&timeEl!=="postponed"&&timeEl!=="cancelled"){
       isLive=true;
     }
     if(home&&away){
