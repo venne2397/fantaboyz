@@ -255,13 +255,11 @@ function parseWorldcup26(data){
     // Determine match status
     var finStr=(g.finished||"").toString().toUpperCase();
     var timeEl=(g.time_elapsed||"").toString().toLowerCase().trim();
-    var isFinished=(finStr==="TRUE"||timeEl==="finished"||timeEl==="ft");
+    var isFinished=(finStr==="TRUE"||timeEl==="finished"||timeEl==="ft"||timeEl==="full time"||timeEl==="full-time"||timeEl==="aet");
     var isLive=false;
     if(!isFinished&&timeEl){
-      // Only live if time_elapsed indicates active play (contains a minute number, or HT/ET/PEN)
-      if(/\d/.test(timeEl)||timeEl==="ht"||timeEl==="et"||timeEl==="pen"||timeEl==="p"||timeEl==="1h"||timeEl==="2h"){
-        isLive=true;
-      }
+      // Any non-empty time_elapsed on a non-finished game = LIVE
+      isLive=true;
     }
     if(home&&away){
       matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date,timeElapsed:timeEl});
@@ -436,7 +434,7 @@ function renderNextGames(){
       h+='<span class="ng-vs" style="font-size:16px;font-weight:800;color:var(--tx);font-family:var(--mn)">'+score+'</span>';
       h+='<span'+(ao?' class="owned"':'')+'>'+af+m.away+(ao?'<span class="ng-player">('+ao.player+')</span>':'')+'</span>';
       h+='</div>';
-      h+='<span class="ng-time" style="color:var(--ok)">'+(m.timeElapsed||"Live")+'</span>';
+      h+='<span class="ng-time" style="color:var(--ok)">'+(m.timeElapsed||"Live").replace(/'/g,"'").toUpperCase()+'</span>';
       h+='</div>';
     }
     liveEl.innerHTML=h;
