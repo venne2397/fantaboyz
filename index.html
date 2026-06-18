@@ -402,7 +402,7 @@ function renderNextGames(){
   function parseMatchDate(dateStr){
     if(!dateStr) return null;
     var m2=dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
-    if(m2){var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+3,parseInt(m2[5]));return new Date(utcMs);}
+    if(m2){var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+1,parseInt(m2[5]));return new Date(utcMs);}
     if(dateStr.indexOf("T")>=0){var d=new Date(dateStr);if(!isNaN(d.getTime()))return d;}
     var d=new Date(dateStr);if(!isNaN(d.getTime()))return d;
     return null;
@@ -450,13 +450,7 @@ function renderNextGames(){
   if(showUpcoming.length>0){
     var h='<h3>\u23F3 Prossime Partite</h3>';
     
-    // DEBUG: Show raw date from API for first upcoming match
-    if(showUpcoming.length>0){
-      var dm=showUpcoming[0].match;
-      console.log("DEBUG upcoming[0]:",JSON.stringify(dm));
-      h+='<div style="font-size:10px;color:#888;padding:4px">DEBUG: raw date="'+dm.date+'" | parsed='+showUpcoming[0].date.toISOString()+'</div>';
-    }
-for(var i=0;i<showUpcoming.length;i++){
+    for(var i=0;i<showUpcoming.length;i++){
       var m=showUpcoming[i].match;
       var d=showUpcoming[i].date;
       var ho=findOwner(m.home),ao=findOwner(m.away);
