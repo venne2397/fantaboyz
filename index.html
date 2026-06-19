@@ -325,7 +325,8 @@ function toggleAuto(){
 
 function calcPoints(){
   var scores={},det={};
-  for(var i=0;i<keys.length;i++){scores[keys[i]]=0;det[keys[i]]=[];}
+  var played={};
+  for(var i=0;i<keys.length;i++){scores[keys[i]]=0;det[keys[i]]=[];played[keys[i]]=0;}
   for(var i=0;i<MATCHES.length;i++){
     var m=MATCHES[i];
     if(!m.finished&&!m.live) continue;
@@ -335,13 +336,13 @@ function calcPoints(){
     var isGroup=(m.stage||"").toLowerCase().indexOf("group")>=0||(m.stage||"").toLowerCase()==="group_stage";
     if(isGroup){
       var ho=findOwner(m.home);
-      if(ho){var mul=MULT[ho.team.t];var p=0;
+      if(ho){played[ho.player]++;var mul=MULT[ho.team.t];var p=0;
         if(m.hg>m.ag){p=2*mul;det[ho.player].push({tm:ho.team.it,ev:"W vs "+m.away+" ("+m.hg+"-"+m.ag+")"+(isProv?" *":""),p:p,prov:isProv});}
         else if(m.hg===m.ag){p=1*mul;det[ho.player].push({tm:ho.team.it,ev:"D vs "+m.away+" ("+m.hg+"-"+m.ag+")"+(isProv?" *":""),p:p,prov:isProv});}
         else{det[ho.player].push({tm:ho.team.it,ev:"L vs "+m.away+" ("+m.hg+"-"+m.ag+")"+(isProv?" *":""),p:0,prov:isProv});}
         scores[ho.player]+=p;}
       var ao=findOwner(m.away);
-      if(ao){var mul=MULT[ao.team.t];var p=0;
+      if(ao){played[ao.player]++;var mul=MULT[ao.team.t];var p=0;
         if(m.ag>m.hg){p=2*mul;det[ao.player].push({tm:ao.team.it,ev:"W vs "+m.home+" ("+m.ag+"-"+m.hg+")"+(isProv?" *":""),p:p,prov:isProv});}
         else if(m.ag===m.hg){p=1*mul;det[ao.player].push({tm:ao.team.it,ev:"D vs "+m.home+" ("+m.ag+"-"+m.hg+")"+(isProv?" *":""),p:p,prov:isProv});}
         else{det[ao.player].push({tm:ao.team.it,ev:"L vs "+m.home+" ("+m.ag+"-"+m.hg+")"+(isProv?" *":""),p:0,prov:isProv});}
@@ -360,14 +361,14 @@ function calcPoints(){
       }
     }
   }
-  return{scores:scores,det:det};
+  return{scores:scores,det:det,played:played};
 }
 
 function renderAll(){
-  var r=calcPoints(),sc=r.scores,det=r.det;
+  var r=calcPoints(),sc=r.scores,det=r.det,played=r.played;
   var sorted=Object.keys(sc).sort(function(a,b){return sc[b]-sc[a];});
   var h="";
-  for(var i=0;i<sorted.length;i++){var nm=sorted[i],rc=i<3?" r"+(i+1):"";h+='<div class="cd'+rc+'"><span class="rk">#'+(i+1)+'</span><div class="nm"><span class="emoji-btn" onclick="openEmojiPicker(\''+nm+'\')" title="Clicca per cambiare">'+(PLAYER_ICONS[nm]||"⭐")+'</span> '+nm+'</div><div class="pt">'+sc[nm].toFixed(1)+'</div><div class="lb">punti'+(function(){var pp=0;for(var d=0;d<det[nm].length;d++){if(det[nm][d].prov)pp+=det[nm][d].p;}return pp>0?" <span style=\'color:var(--wa);font-size:9px\'>(+"+pp.toFixed(1)+" live)</span>":"";}())+'</div></div>';}
+  for(var i=0;i<sorted.length;i++){var nm=sorted[i],rc=i<3?" r"+(i+1):"";h+='<div class="cd'+rc+'"><span class="rk">#'+(i+1)+'</span><div class="nm"><span class="emoji-btn" onclick="openEmojiPicker(\''+nm+'\')" title="Clicca per cambiare">'+(PLAYER_ICONS[nm]||"⭐")+'</span> '+nm+'</div><div class="pt">'+sc[nm].toFixed(1)+'</div><div class="lb">'+(played[nm]||0)+' partite | punti'+(function(){var pp=0;for(var d=0;d<det[nm].length;d++){if(det[nm][d].prov)pp+=det[nm][d].p;}return pp>0?" <span style=\'color:var(--wa);font-size:9px\'>(+"+pp.toFixed(1)+" live)</span>":"";}())+'</div></div>';}
   document.getElementById("board").innerHTML=h;
   // Details
   h="<h2>Dettaglio Punti</h2>";
