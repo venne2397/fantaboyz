@@ -247,6 +247,24 @@ function findOwner(name){
   return null;
 }
 
+
+// Timezone offset map for FIFA 2026 venues (summer DST offsets)
+// Returns hours to ADD to venue local time to get UTC
+function getVenueUtcOffset(game){
+  var sid=(game.stadium_id||"").toString();
+  var sname=((game.stadium_name||game.stadium||"")+"").toLowerCase();
+  var city=((game.city||"")+"").toLowerCase();
+  var all=sid+" "+sname+" "+city;
+  // PDT venues (UTC-7): LA, SF/Santa Clara, Seattle, Vancouver
+  if(all.indexOf("sofi")>=0||all.indexOf("levi")>=0||all.indexOf("lumen")>=0||all.indexOf("bc place")>=0||all.indexOf("vancouver")>=0||all.indexOf("seattle")>=0||all.indexOf("santa clara")>=0||all.indexOf("inglewood")>=0||all.indexOf("los angeles")>=0||all.indexOf("san francisco")>=0) return 7;
+  // CDT venues (UTC-5): Houston, Dallas/Arlington, Kansas City
+  if(all.indexOf("nrg")>=0||all.indexOf("at&t")>=0||all.indexOf("arrowhead")>=0||all.indexOf("houston")>=0||all.indexOf("arlington")>=0||all.indexOf("dallas")>=0||all.indexOf("kansas")>=0) return 5;
+  // CDT Mexico (UTC-6): Mexico City, Guadalajara, Monterrey  
+  if(all.indexOf("azteca")>=0||all.indexOf("akron")>=0||all.indexOf("bbva")>=0||all.indexOf("mexico")>=0||all.indexOf("guadalajara")>=0||all.indexOf("monterrey")>=0) return 6;
+  // EDT venues (UTC-4): everything else (NY, Boston, Philly, Miami, Toronto, Atlanta)
+  return 4;
+}
+
 function parseWorldcup26(data){
   // worldcup26.ir format
   var matches=[];
@@ -274,7 +292,8 @@ function parseWorldcup26(data){
       }
     }
     if(home&&away){
-      matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date,timeElapsed:timeEl});
+      var venueOff=getVenueUtcOffset(g);
+      matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date,timeElapsed:timeEl,utcOff:venueOff});
     }
   }
   return matches;
@@ -412,11 +431,11 @@ function renderNextGames(){
   var upcoming=[];
   var live=[];
   
-  function parseMatchDate(dateStr){
+  function parseMatchDate(dateStr,utcOff){
     if(!dateStr) return null;
-    // API times need +1h to get UTC (verified: raw 15:00 → 16:00 UTC = 18:00 CEST for a confirmed 18:00 CEST match)
+    var off=(typeof utcOff==="number")?utcOff:4;
     var m2=dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
-    if(m2){var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+1,parseInt(m2[5]));return new Date(utcMs);}
+    if(m2){var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+off,parseInt(m2[5]));return new Date(utcMs);}
     if(dateStr.indexOf("T")>=0){var d=new Date(dateStr);if(!isNaN(d.getTime()))return d;}
     var d=new Date(dateStr);if(!isNaN(d.getTime()))return d;
     return null;
@@ -427,7 +446,7 @@ function renderNextGames(){
     if(m.live){live.push(m);continue;}
     if(m.finished) continue;
     if(!m.date) continue;
-    var d=parseMatchDate(m.date);
+    var d=parseMatchDate(m.date,m.utcOff);
     if(!d) continue;
     if(d>now) upcoming.push({match:m,date:d});
   }
