@@ -10,7 +10,9 @@
 body{background:var(--bg);color:var(--tx);font-family:var(--fn);padding:20px;min-height:100vh;-webkit-text-size-adjust:100%;touch-action:manipulation}
 .ctr{max-width:1100px;margin:0 auto}
 .hdr{text-align:center;margin-bottom:28px;padding:28px 20px;background:linear-gradient(135deg,var(--sf),var(--bg2));border-radius:16px;border:1px solid var(--bd)}
-.hdr h1{font-size:2rem;font-weight:700;background:linear-gradient(135deg,var(--pr),var(--ok));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.hdr h1{font-size:2rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:12px}
+.hdr-title{background:linear-gradient(135deg,var(--pr),var(--ok));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hdr-trophy{height:52px}
 .hdr p{color:var(--tx2);font-size:13px}
 .ctrl{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .btn{padding:9px 16px;background:var(--pr);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
@@ -147,12 +149,18 @@ td{padding:6px}
 .ng-player{font-size:9px;color:var(--wa);margin-left:2px}
 .ng-time{font-size:10px;color:var(--tx3);min-width:80px;text-align:right}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+.pnl table{table-layout:fixed}
+.pnl table th:nth-child(1),.pnl table td:nth-child(1){width:40%}
+.pnl table th:nth-child(2),.pnl table td:nth-child(2){width:20%;text-align:center}
+.pnl table th:nth-child(3),.pnl table td:nth-child(3){width:15%;text-align:center}
+.pnl table th:nth-child(4),.pnl table td:nth-child(4){width:25%;text-align:right}
 </style>
 </head>
 <body>
 <div class="ctr">
   <div class="hdr">
-    <h1><img src="https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/2026_FIFA_World_Cup.svg/200px-2026_FIFA_World_Cup.svg.png" alt="World Cup" style="height:48px;vertical-align:middle;margin-right:10px">Fanta BOYZ</h1>
+    <h1><img src="https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/2026_FIFA_World_Cup.svg/200px-2026_FIFA_World_Cup.svg.png" alt="World Cup" class="hdr-trophy"><span class="hdr-title">Fanta BOYZ</span><img src="https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/2026_FIFA_World_Cup.svg/200px-2026_FIFA_World_Cup.svg.png" alt="World Cup" class="hdr-trophy"></h1>
     <p>Fantasy World Cup 2026 &mdash; Live Scoreboard</p>
   </div>
   <div class="ctrl">
