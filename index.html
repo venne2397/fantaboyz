@@ -158,6 +158,7 @@ td{padding:6px}
   <div class="ctrl">
     <button class="btn" id="fetchBtn" onclick="doFetch()">&#x21bb; Aggiorna Ora</button>
     <button class="btn btn2" id="autoBtn" onclick="toggleAuto()">&#x23F0; Auto 5min</button>
+    
     <span class="status s-er" id="badge">In attesa...</span>
   </div>
   <div class="next-games" id="liveGames" style="display:none"></div>
@@ -404,6 +405,7 @@ function renderNextGames(){
   
   function parseMatchDate(dateStr){
     if(!dateStr) return null;
+    // API times need +1h to get UTC (verified: raw 15:00 → 16:00 UTC = 18:00 CEST for a confirmed 18:00 CEST match)
     var m2=dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
     if(m2){var utcMs=Date.UTC(parseInt(m2[3]),parseInt(m2[1])-1,parseInt(m2[2]),parseInt(m2[4])+1,parseInt(m2[5]));return new Date(utcMs);}
     if(dateStr.indexOf("T")>=0){var d=new Date(dateStr);if(!isNaN(d.getTime()))return d;}
@@ -605,6 +607,8 @@ function closeEmojiPicker(){
 }
 
 try{
+
+
 // Init
 document.getElementById("tabs").innerHTML='<button class="tab on" onclick="switchTab(\'det\',this)">Classifica</button><button class="tab" onclick="switchTab(\'match\',this)">Partite</button><button class="tab" onclick="switchTab(\'bracket\',this)">Eliminazione</button><button class="tab" onclick="switchTab(\'rules\',this)">Regole</button>';
 renderRules();
