@@ -250,22 +250,160 @@ function findOwner(name){
 
 // Timezone offset map for FIFA 2026 venues (summer DST offsets)
 // Returns hours to ADD to venue local time to get UTC
+
+// Official FIFA 2026 Group Stage UTC kickoff times (bulletproof - no timezone guessing)
+var KICKOFF_UTC={
+"mexico|south africa":"2026-06-11T19:00:00Z",
+"south korea|czechia":"2026-06-12T02:00:00Z",
+"canada|bosnia":"2026-06-12T19:00:00Z",
+"united states|paraguay":"2026-06-13T01:00:00Z",
+"qatar|switzerland":"2026-06-13T19:00:00Z",
+"brazil|morocco":"2026-06-13T22:00:00Z",
+"haiti|scotland":"2026-06-14T01:00:00Z",
+"australia|turkey":"2026-06-14T04:00:00Z",
+"germany|curacao":"2026-06-14T17:00:00Z",
+"netherlands|japan":"2026-06-14T20:00:00Z",
+"ivory coast|ecuador":"2026-06-14T23:00:00Z",
+"sweden|tunisia":"2026-06-15T02:00:00Z",
+"spain|cape verde":"2026-06-15T16:00:00Z",
+"belgium|egypt":"2026-06-15T19:00:00Z",
+"saudi arabia|uruguay":"2026-06-15T22:00:00Z",
+"iran|new zealand":"2026-06-16T01:00:00Z",
+"france|senegal":"2026-06-16T19:00:00Z",
+"iraq|norway":"2026-06-16T22:00:00Z",
+"argentina|algeria":"2026-06-17T01:00:00Z",
+"austria|jordan":"2026-06-17T04:00:00Z",
+"portugal|dr congo":"2026-06-17T17:00:00Z",
+"england|croatia":"2026-06-17T20:00:00Z",
+"ghana|panama":"2026-06-17T23:00:00Z",
+"uzbekistan|colombia":"2026-06-18T02:00:00Z",
+"czechia|south africa":"2026-06-18T16:00:00Z",
+"bosnia|switzerland":"2026-06-18T19:00:00Z",
+"canada|qatar":"2026-06-18T22:00:00Z",
+"mexico|south korea":"2026-06-19T01:00:00Z",
+"united states|australia":"2026-06-19T19:00:00Z",
+"scotland|morocco":"2026-06-19T22:00:00Z",
+"brazil|haiti":"2026-06-20T01:00:00Z",
+"turkey|paraguay":"2026-06-20T03:00:00Z",
+"netherlands|sweden":"2026-06-20T17:00:00Z",
+"germany|ivory coast":"2026-06-20T20:00:00Z",
+"ecuador|curacao":"2026-06-21T00:00:00Z",
+"tunisia|japan":"2026-06-21T04:00:00Z",
+"spain|saudi arabia":"2026-06-21T16:00:00Z",
+"belgium|iran":"2026-06-21T19:00:00Z",
+"uruguay|cape verde":"2026-06-21T22:00:00Z",
+"new zealand|egypt":"2026-06-22T01:00:00Z",
+"argentina|austria":"2026-06-22T17:00:00Z",
+"france|iraq":"2026-06-22T21:00:00Z",
+"norway|senegal":"2026-06-23T00:00:00Z",
+"jordan|algeria":"2026-06-23T03:00:00Z",
+"portugal|uzbekistan":"2026-06-23T17:00:00Z",
+"england|ghana":"2026-06-23T20:00:00Z",
+"panama|croatia":"2026-06-23T23:00:00Z",
+"colombia|dr congo":"2026-06-24T02:00:00Z",
+"switzerland|canada":"2026-06-24T19:00:00Z",
+"bosnia|qatar":"2026-06-24T19:00:00Z",
+"scotland|brazil":"2026-06-24T22:00:00Z",
+"morocco|haiti":"2026-06-24T22:00:00Z",
+"czechia|mexico":"2026-06-25T01:00:00Z",
+"south africa|south korea":"2026-06-25T01:00:00Z",
+"ecuador|germany":"2026-06-25T20:00:00Z",
+"curacao|ivory coast":"2026-06-25T20:00:00Z",
+"tunisia|netherlands":"2026-06-25T23:00:00Z",
+"japan|sweden":"2026-06-25T23:00:00Z",
+"turkey|united states":"2026-06-26T02:00:00Z",
+"paraguay|australia":"2026-06-26T02:00:00Z",
+"norway|france":"2026-06-26T19:00:00Z",
+"senegal|iraq":"2026-06-26T19:00:00Z",
+"uruguay|spain":"2026-06-27T00:00:00Z",
+"cape verde|saudi arabia":"2026-06-27T00:00:00Z",
+"new zealand|belgium":"2026-06-27T03:00:00Z",
+"egypt|iran":"2026-06-27T03:00:00Z",
+"panama|england":"2026-06-27T21:00:00Z",
+"croatia|ghana":"2026-06-27T21:00:00Z",
+"colombia|portugal":"2026-06-27T23:30:00Z",
+"dr congo|uzbekistan":"2026-06-27T23:30:00Z",
+"jordan|argentina":"2026-06-28T02:00:00Z",
+"algeria|austria":"2026-06-28T02:00:00Z"
+};
+
+// Normalize team name for lookup
+function normTeam(name){
+  var n=(name||"").toLowerCase().trim();
+  if(n.indexOf("bosnia")>=0) return "bosnia";
+  if(n.indexOf("czech")>=0) return "czechia";
+  if(n.indexOf("ivoire")>=0||n.indexOf("ivory")>=0) return "ivory coast";
+  if(n.indexOf("cape verde")>=0||n.indexOf("cabo verde")>=0) return "cape verde";
+  if(n.indexOf("congo")>=0&&(n.indexOf("dr")>=0||n.indexOf("dem")>=0)) return "dr congo";
+  if(n.indexOf("korea")>=0&&n.indexOf("south")<0&&n.indexOf("north")<0) return "south korea";
+  if(n.indexOf("south korea")>=0||n.indexOf("korea republic")>=0) return "south korea";
+  if(n.indexOf("new zealand")>=0) return "new zealand";
+  if(n.indexOf("south africa")>=0) return "south africa";
+  if(n.indexOf("saudi")>=0) return "saudi arabia";
+  if(n==="usa"||n.indexOf("united states")>=0) return "united states";
+  if(n.indexOf("curacao")>=0||n.indexOf("curaçao")>=0) return "curacao";
+  return n;
+}
+
+// Get official kickoff as Date object (UTC)
+function getOfficialKickoff(homeName,awayName){
+  var h=normTeam(homeName),a=normTeam(awayName);
+  var key=h+"|"+a;
+  if(KICKOFF_UTC[key]) return new Date(KICKOFF_UTC[key]);
+  // Try reversed (in case API swaps home/away)
+  key=a+"|"+h;
+  if(KICKOFF_UTC[key]) return new Date(KICKOFF_UTC[key]);
+  return null;
+}
+
 function getVenueUtcOffset(game){
-  var sid=(game.stadium_id||"").toString();
-  var sname=((game.stadium_name||game.stadium||"")+"").toLowerCase();
-  var city=((game.city||"")+"").toLowerCase();
-  var all=sid+" "+sname+" "+city;
-  // PDT venues (UTC-7): LA, SF/Santa Clara, Seattle, Vancouver
-  if(all.indexOf("sofi")>=0||all.indexOf("levi")>=0||all.indexOf("lumen")>=0||all.indexOf("bc place")>=0||all.indexOf("vancouver")>=0||all.indexOf("seattle")>=0||all.indexOf("santa clara")>=0||all.indexOf("inglewood")>=0||all.indexOf("los angeles")>=0||all.indexOf("san francisco")>=0) return 7;
-  // CDT venues (UTC-5): Houston, Dallas/Arlington, Kansas City
-  if(all.indexOf("nrg")>=0||all.indexOf("at&t")>=0||all.indexOf("arrowhead")>=0||all.indexOf("houston")>=0||all.indexOf("arlington")>=0||all.indexOf("dallas")>=0||all.indexOf("kansas")>=0) return 5;
-  // CDT Mexico (UTC-6): Mexico City, Guadalajara, Monterrey  
-  if(all.indexOf("azteca")>=0||all.indexOf("akron")>=0||all.indexOf("bbva")>=0||all.indexOf("mexico")>=0||all.indexOf("guadalajara")>=0||all.indexOf("monterrey")>=0) return 6;
-  // EDT venues (UTC-4): everything else (NY, Boston, Philly, Miami, Toronto, Atlanta)
-  return 4;
+  // Stadium ID → UTC offset for summer 2026 (DST)
+  var stadiumOffsets={"1":6,"2":6,"3":6,"4":5,"5":5,"6":5,"7":4,"8":4,"9":4,"10":4,"11":4,"12":4,"13":7,"14":7,"15":7,"16":7};
+  
+  // Try ALL possible field names for stadium_id
+  var sid="";
+  var possibleIdFields=["stadium_id","stadiumId","stadium","venue_id","venueId","ground_id"];
+  for(var f=0;f<possibleIdFields.length;f++){
+    var val=game[possibleIdFields[f]];
+    if(val!=null&&val!==""){
+      // Could be number, string, or object with id
+      if(typeof val==="object"&&val.id) sid=val.id.toString().trim();
+      else if(typeof val==="object"&&val._id) sid=val._id.toString().trim();
+      else sid=val.toString().trim();
+      if(stadiumOffsets[sid]!==undefined) return stadiumOffsets[sid];
+    }
+  }
+  
+  // Try to find stadium name/city in any field
+  var searchStr="";
+  var allKeys=Object.keys(game);
+  for(var k=0;k<allKeys.length;k++){
+    var v=game[allKeys[k]];
+    if(v==null) continue;
+    if(typeof v==="object") v=JSON.stringify(v);
+    searchStr+=" "+(v+"").toLowerCase();
+  }
+  
+  // PDT venues (UTC-7)
+  if(/sofi|levi|lumen|bc.?place|vancouver|seattle|santa.?clara|inglewood|los.?angeles|san.?francisco/.test(searchStr)) return 7;
+  // CDT US venues (UTC-5)
+  if(/nrg|at.?t.?stadium|arrowhead|geha|houston|arlington|dallas|kansas/.test(searchStr)) return 5;
+  // CDT Mexico (UTC-6)
+  if(/azteca|akron|bbva|mexico.?city|guadalajara|monterrey/.test(searchStr)) return 6;
+  // EDT venues (UTC-4)
+  if(/metlife|hard.?rock|gillette|lincoln.?fin|mercedes.?benz|bmo|new.?york|east.?rutherford|miami|boston|foxborough|philadelphia|toronto|atlanta/.test(searchStr)) return 4;
+  
+  // FALLBACK: If no stadium info found, try to determine from the scheduled time itself
+  // Log for debugging
+  if(typeof console!=="undefined") console.warn("⚠️ VENUE UNKNOWN - keys:",allKeys.join(","),"| sample values:",searchStr.substring(0,200));
+  return 4; // Default EDT
 }
 
 function parseWorldcup26(data){
+  // Debug: log first game object keys/structure
+  var games_temp=data.games||data.data||(Array.isArray(data)?data:[]);
+  if(games_temp.length>0) console.log("🔍 API GAME OBJECT SAMPLE:",JSON.stringify(games_temp[0]));
+  
   // worldcup26.ir format
   var matches=[];
   var games=data.games||data.data||(Array.isArray(data)?data:[]);
@@ -446,7 +584,7 @@ function renderNextGames(){
     if(m.live){live.push(m);continue;}
     if(m.finished) continue;
     if(!m.date) continue;
-    var d=parseMatchDate(m.date,m.utcOff);
+    var d=getOfficialKickoff(m.home,m.away)||parseMatchDate(m.date,m.utcOff);
     if(!d) continue;
     if(d>now) upcoming.push({match:m,date:d});
   }
