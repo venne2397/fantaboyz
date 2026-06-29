@@ -150,12 +150,27 @@ td{padding:6px}
 .ng-time{font-size:10px;color:var(--tx3);min-width:80px;text-align:right}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 
-.pnl table{table-layout:fixed}
+.pnl table{table-layout:auto}
 .pnl table th,.pnl table td{text-align:center}
 .pnl table th:nth-child(1),.pnl table td:nth-child(1){width:40%;text-align:left}
 .pnl table th:nth-child(2),.pnl table td:nth-child(2){width:20%}
 .pnl table th:nth-child(3),.pnl table td:nth-child(3){width:15%}
 .pnl table th:nth-child(4),.pnl table td:nth-child(4){width:25%}
+
+.rules-table{table-layout:fixed;width:100%;font-size:11px}
+.rules-table th,.rules-table td{text-align:center;padding:6px 4px;white-space:nowrap}
+.rules-table th:first-child,.rules-table td:first-child{text-align:left;width:35%;white-space:normal}
+.rules-table th:not(:first-child),.rules-table td:not(:first-child){width:13%}
+@media(max-width:768px){
+.rules-table{font-size:10px}
+.rules-table th,.rules-table td{padding:4px 2px}
+.rules-table th:first-child,.rules-table td:first-child{width:28%}
+.rules-table th:not(:first-child),.rules-table td:not(:first-child){width:14%}
+}
+@media(max-width:380px){
+.rules-table{font-size:9px}
+.rules-table th:first-child,.rules-table td:first-child{width:25%}
+}
 </style>
 </head>
 <body>
@@ -829,8 +844,8 @@ function renderBracket(){
       var ho=findOwner(m.home),ao=findOwner(m.away);
       var hWon=m.finished&&m.hg!==null&&m.ag!==null&&m.hg>m.ag;
       var aWon=m.finished&&m.hg!==null&&m.ag!==null&&m.ag>m.hg;
-      var hf=ho?flag(ho.team.f,12):"";
-      var af=ao?flag(ao.team.f,12):"";
+      var hf=ho?flag(ho.team.f,12):(flagForTeam(m.home)?flag(flagForTeam(m.home),12):"");
+      var af=ao?flag(ao.team.f,12):(flagForTeam(m.away)?flag(flagForTeam(m.away),12):"");
       h+='<div class="bracket-match'+(m.finished?" winner":"")+'">';
       h+='<div class="bracket-team'+(hWon?" won":"")+(aWon?" lost":"")+'"><span class="bname">'+hf+(m.home||"TBD")+(ho?'<span class="bplayer">'+ho.player+'</span>':'')+'</span><span class="bscore">'+(m.hg!==null?m.hg:"-")+'</span></div>';
       h+='<div class="bracket-team'+(aWon?" won":"")+(hWon?" lost":"")+'"><span class="bname">'+af+(m.away||"TBD")+(ao?'<span class="bplayer">'+ao.player+'</span>':'')+'</span><span class="bscore">'+(m.ag!==null?m.ag:"-")+'</span></div>';
@@ -847,9 +862,9 @@ function renderBracket(){
 }
 
 function renderRules(){
-  var h="<h2>Regole e Punteggi</h2><table><thead><tr><th>Evento</th><th>Base</th><th>1a (x1)</th><th>2a (x1.5)</th><th>3a (x2)</th><th>4a (x3)</th></tr></thead><tbody>";
+  var h="<h2>Regole e Punteggi</h2><table class="rules-table"><thead><tr><th>Evento</th><th>Base</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>";
   h+="<tr><td>Vittoria girone</td><td>2</td><td>2</td><td>3</td><td>4</td><td>6</td></tr><tr><td>Pareggio girone</td><td>1</td><td>1</td><td>1.5</td><td>2</td><td>3</td></tr><tr><td>1o nel girone</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>2o nel girone</td><td>3</td><td>3</td><td>4.5</td><td>6</td><td>9</td></tr><tr><td>Qualif. KO</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Quarti</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Semifinale</td><td>10</td><td>10</td><td>15</td><td>20</td><td>30</td></tr><tr><td>Finale</td><td>15</td><td>15</td><td>22.5</td><td>30</td><td>45</td></tr><tr><td>Campione</td><td>20</td><td>20</td><td>30</td><td>40</td><td>60</td></tr></tbody></table>";
-  h+="<h3 style='margin-top:16px'>Squadre per Giocatore</h3><table><thead><tr><th>Player</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>";
+  h+="<h3 style='margin-top:16px'>Squadre per Giocatore</h3><table class="rules-table"><thead><tr><th>Player</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>";
 for(var i=0;i<keys.length;i++){var pl=keys[i],teams=PLAYERS[pl];h+="<tr><td style='font-weight:700'>"+pl+"</td>";for(var tier=1;tier<=4;tier++){var ns=[];for(var j=0;j<teams.length;j++){if(teams[j].t===tier)ns.push(flag(teams[j].f)+teams[j].it);}h+="<td>"+ns.join(" ")+"</td>";}h+="</tr>";}
   h+="</tbody></table>";
   document.getElementById("p-rules").innerHTML=h;
