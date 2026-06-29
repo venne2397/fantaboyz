@@ -526,16 +526,24 @@ function calcPoints(){
         else{det[ao.player].push({tm:ao.team.it,ev:"L vs "+m.home+" ("+m.ag+"-"+m.hg+")"+(isProv?" *":""),p:0,prov:isProv});}
         scores[ao.player]+=p;}
     }else{
-      // Knockout bonus
-      var bonus=5;
-      if((m.stage||"").indexOf("SEMI")>=0||(m.stage||"").indexOf("semi")>=0) bonus=10;
-      if((m.stage||"").indexOf("FINAL")>=0||(m.stage||"").indexOf("final")>=0) bonus=15;
-      var ho=findOwner(m.home),ao=findOwner(m.away);
-      if(ho){var mul=MULT[ho.team.t];var p=bonus*mul;scores[ho.player]+=p;det[ho.player].push({tm:ho.team.it,ev:m.stage,p:p});}
-      if(ao){var mul=MULT[ao.team.t];var p=bonus*mul;scores[ao.player]+=p;det[ao.player].push({tm:ao.team.it,ev:m.stage,p:p});}
-      if((m.stage||"").toUpperCase()==="FINAL"){
-        var winner=m.hg>m.ag?m.home:(m.ag>m.hg?m.away:null);
-        if(winner){var wo=findOwner(winner);if(wo){var mul=MULT[wo.team.t];var p=20*mul;scores[wo.player]+=p;det[wo.player].push({tm:wo.team.it,ev:"CAMPIONE!",p:p});}}
+      // Knockout: only award points to the WINNER who ADVANCES
+      if(!m.finished) continue;
+      var stg=(m.stage||"").toLowerCase();
+      var winner=null;
+      if(m.hg>m.ag) winner=m.home;
+      else if(m.ag>m.hg) winner=m.away;
+      if(!winner) continue; // draws in KO go to pens - winner unclear without pen data
+      var wo=findOwner(winner);
+      if(wo){
+        var mul=MULT[wo.team.t];
+        var bonus=0,label="";
+        // What round did they ADVANCE TO by winning this match?
+        if(stg.indexOf("32")>=0||stg.indexOf("r32")>=0){bonus=5;label="Qualificazione Ottavi";}
+        else if(stg.indexOf("16")>=0||stg.indexOf("r16")>=0||stg.indexOf("last_16")>=0){bonus=5;label="Quarti di finale";}
+        else if(stg.indexOf("quarter")>=0||stg.indexOf("quart")>=0){bonus=10;label="Semifinale";}
+        else if(stg.indexOf("semi")>=0&&stg.indexOf("final")<0){bonus=15;label="Finale";}
+        else if(stg.indexOf("final")>=0&&stg.indexOf("semi")<0){bonus=20;label="CAMPIONE DEL MONDO!";}
+        if(bonus>0){var p=bonus*mul;scores[wo.player]+=p;det[wo.player].push({tm:wo.team.it,ev:label,p:p});}
       }
     }
   }
@@ -613,11 +621,7 @@ function calcPoints(){
     awardedQual[team]=true;
     var mul=MULT[ow.team.t];
     var pos=qualifiedTeams[team];
-    // Qualification bonus: 5 × mul
-    var qp=5*mul;
-    scores[ow.player]+=qp;
-    det[ow.player].push({tm:ow.team.it,ev:"Qualificazione R32",p:qp});
-    // Position bonus
+        // Position bonus
     if(pos==="1st"){var pp=5*mul;scores[ow.player]+=pp;det[ow.player].push({tm:ow.team.it,ev:"1° nel girone",p:pp});}
     else if(pos==="2nd"){var pp=3*mul;scores[ow.player]+=pp;det[ow.player].push({tm:ow.team.it,ev:"2° nel girone",p:pp});}
   }
