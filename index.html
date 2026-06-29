@@ -416,22 +416,33 @@ function parseWorldcup26(data){
     if(isNaN(hg)) hg=null;
     if(isNaN(ag)) ag=null;
     var stage=g.type||g.round||"group";
+    var groupId=(g.group||"").toString().toUpperCase();
     var date=g.datetime||g.local_date||g.date||g.utc_date||"";
     
     // Determine match status
     var finStr=(g.finished||"").toString().toUpperCase();
-    var timeEl=(g.time_elapsed||"").toString().toLowerCase().trim();
-    var isFinished=(finStr==="TRUE"||timeEl==="finished"||timeEl==="ft"||timeEl==="full time"||timeEl==="full-time"||timeEl==="aet");
+    var statusStr=(g.status||g.match_status||"").toString().toLowerCase().trim();
+    var timeEl=(g.time_elapsed||g.time||g.minute||"").toString().toLowerCase().trim();
+    // Use status field only if it looks like a time/minute (not a match state)
+    if(!timeEl&&/^[0-9]/.test(statusStr)) timeEl=statusStr;
+    // Detect finished from multiple possible indicators
+    var isFinished=(finStr==="TRUE"||finStr==="YES"||statusStr==="completed"||statusStr==="finished"||statusStr==="ended"||statusStr==="full-time"||statusStr==="ft"||timeEl==="finished"||timeEl==="ft"||timeEl==="full time"||timeEl==="full-time"||timeEl==="aet");
     var isLive=false;
     if(!isFinished){
-      // WHITELIST: only live if time_elapsed shows actual play time
-      if(/[1-9]/.test(timeEl)||timeEl==="ht"||timeEl==="et"||timeEl==="pen"||timeEl==="half time"||timeEl==="extra time"||timeEl==="penalties"){
+      // Live if: time_elapsed has digits or known keywords
+      if(/[0-9]/.test(timeEl)||timeEl==="ht"||timeEl==="et"||timeEl==="pen"||timeEl==="half time"||timeEl==="extra time"||timeEl==="penalties"||timeEl==="half-time"){
         isLive=true;
       }
+      // Also live if: not finished, has real scores (at least one goal scored)
+      if(!isLive&&hg!==null&&ag!==null&&(hg>0||ag>0)&&finStr!=="TRUE"){
+        isLive=true;
+        console.log("⚽ LIVE (score-based):",home,"vs",away,hg+"-"+ag);
+      }
     }
+    if(isLive) console.log("⚽ LIVE MATCH:",home,hg,"-",ag,away,"| time:",timeEl);
     if(home&&away){
       var venueOff=getVenueUtcOffset(g);
-      matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,date:date,timeElapsed:timeEl,utcOff:venueOff});
+      matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,group:groupId,date:date,timeElapsed:timeEl,utcOff:venueOff});
     }
   }
   return matches;
@@ -528,6 +539,89 @@ function calcPoints(){
       }
     }
   }
+  
+  // === QUALIFICATION & GROUP POSITION BONUSES ===
+  // Build group standings from finished group matches
+  var groupTeams={}; // groupId → [{team,w,d,l,gf,ga,pts}]
+  for(var i=0;i<MATCHES.length;i++){
+    var m=MATCHES[i];
+    if(!m.finished) continue;
+    if(m.hg===null||m.ag===null) continue;
+    var isGroup=(m.stage||"").toLowerCase().indexOf("group")>=0||(m.stage||"").toLowerCase()==="group_stage";
+    if(!isGroup) continue;
+    var grp=m.group||(m.stage||"").replace(/.*group.?/i,"").replace(/[^a-lA-L0-9]/g,"").toUpperCase()||"?";
+    // Init teams
+    if(!groupTeams[grp]) groupTeams[grp]=[];
+    var updateTeam=function(gTeams,name,gf,ga){
+      var found=null;
+      for(var t=0;t<gTeams.length;t++){if(gTeams[t].team===name){found=gTeams[t];break;}}
+      if(!found){found={team:name,w:0,d:0,l:0,gf:0,ga:0,pts:0,mp:0};gTeams.push(found);}
+      found.gf+=gf;found.ga+=ga;found.mp++;
+      if(gf>ga){found.w++;found.pts+=3;}
+      else if(gf===ga){found.d++;found.pts+=1;}
+      else{found.l++;}
+    };
+    updateTeam(groupTeams[grp],m.home,m.hg,m.ag);
+    updateTeam(groupTeams[grp],m.away,m.ag,m.hg);
+  }
+  // Sort each group: pts → gd → gf
+  var qualifiedTeams={};
+  var thirdPlaces=[];
+  for(var grp in groupTeams){
+    var gt=groupTeams[grp];
+    // Only process completed groups (all teams played 3 matches each, at least 4 teams)
+    var complete=true;
+    for(var t=0;t<gt.length;t++){if(gt[t].mp<3){complete=false;break;}}
+    if(!complete||gt.length<3) continue;
+    gt.sort(function(a,b){
+      if(b.pts!==a.pts) return b.pts-a.pts;
+      var gdA=a.gf-a.ga,gdB=b.gf-b.ga;
+      if(gdB!==gdA) return gdB-gdA;
+      return b.gf-a.gf;
+    });
+    // 1st and 2nd qualify automatically
+    if(gt[0]){qualifiedTeams[gt[0].team]="1st";} 
+    if(gt[1]){qualifiedTeams[gt[1].team]="2nd";}
+    if(gt[2]){thirdPlaces.push(gt[2]);}
+  }
+  // Best 8 third-place teams qualify (48-team format: 12 groups, 8 best 3rds qualify)
+  thirdPlaces.sort(function(a,b){
+    if(b.pts!==a.pts) return b.pts-a.pts;
+    var gdA=a.gf-a.ga,gdB=b.gf-b.ga;
+    if(gdB!==gdA) return gdB-gdA;
+    return b.gf-a.gf;
+  });
+  for(var t=0;t<Math.min(8,thirdPlaces.length);t++){
+    qualifiedTeams[thirdPlaces[t].team]="3rd";
+  }
+  
+  // Also: any team in a knockout match qualifies (in case group data is incomplete)
+  for(var i=0;i<MATCHES.length;i++){
+    var m=MATCHES[i];
+    var isGroup=(m.stage||"").toLowerCase().indexOf("group")>=0||(m.stage||"").toLowerCase()==="group_stage";
+    if(isGroup) continue;
+    if(m.home&&!qualifiedTeams[m.home]) qualifiedTeams[m.home]="KO";
+    if(m.away&&!qualifiedTeams[m.away]) qualifiedTeams[m.away]="KO";
+  }
+  
+  // Award qualification + position bonuses (once per team)
+  var awardedQual={};
+  for(var team in qualifiedTeams){
+    var ow=findOwner(team);
+    if(!ow) continue;
+    if(awardedQual[team]) continue;
+    awardedQual[team]=true;
+    var mul=MULT[ow.team.t];
+    var pos=qualifiedTeams[team];
+    // Qualification bonus: 5 × mul
+    var qp=5*mul;
+    scores[ow.player]+=qp;
+    det[ow.player].push({tm:ow.team.it,ev:"Qualificazione R32",p:qp});
+    // Position bonus
+    if(pos==="1st"){var pp=5*mul;scores[ow.player]+=pp;det[ow.player].push({tm:ow.team.it,ev:"1° nel girone",p:pp});}
+    else if(pos==="2nd"){var pp=3*mul;scores[ow.player]+=pp;det[ow.player].push({tm:ow.team.it,ev:"2° nel girone",p:pp});}
+  }
+
   return{scores:scores,det:det,played:played};
 }
 
@@ -660,7 +754,20 @@ function renderNextGames(){
   }
 }
 // Update countdown every minute
-setInterval(function(){if(MATCHES.length>0)renderNextGames();},60000);
+setInterval(function(){
+  // Check if any match is live → fetch fresh data more often
+  var anyLive=false;
+  for(var i=0;i<MATCHES.length;i++){if(MATCHES[i].live){anyLive=true;break;}}
+  if(anyLive||MATCHES.length>0) renderNextGames();
+},60000);
+// Also re-fetch data every 90 seconds for live updates
+setInterval(async function(){
+  try{
+    var apis=[{name:"worldcupjson.net",url:"https://worldcupjson.net/matches",parse:"worldcup26"}];
+    var resp=await fetch(apis[0].url);
+    if(resp.ok){var json=await resp.json();MATCHES=parseWorldcup26(json);renderAll();}
+  }catch(e){}
+},90000);
 
 function renderBracket(){
   var el=document.getElementById("p-bracket");
