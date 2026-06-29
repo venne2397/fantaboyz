@@ -230,8 +230,9 @@ function flagForTeam(teamName){
 // APIs to try in order (CORS-enabled ones first)
 var APIS=[
   {name:"worldcup26.ir",url:"https://worldcup26.ir/get/games",auth:null,parse:"worldcup26"},
-  {name:"football-data.org (proxy)",url:"https://corsproxy.io/?"+encodeURIComponent("https://api.football-data.org/v4/competitions/WC/matches"),auth:"bbcaa923e9bc4b4d93b947c339ccf3b4",parse:"footballdata"},
-  {name:"allorigins proxy",url:"https://api.allorigins.win/raw?url="+encodeURIComponent("https://api.football-data.org/v4/competitions/WC/matches"),auth:"bbcaa923e9bc4b4d93b947c339ccf3b4",parse:"footballdata"}
+  {name:"worldcup26.ir/api",url:"https://worldcup26.ir/api/games",auth:null,parse:"worldcup26"},
+  {name:"corsproxy+football-data",url:"https://corsproxy.io/?"+encodeURIComponent("https://api.football-data.org/v4/competitions/WC/matches"),auth:"bbcaa923e9bc4b4d93b947c339ccf3b4",parse:"footballdata"},
+  {name:"allorigins+football-data",url:"https://api.allorigins.win/raw?url="+encodeURIComponent("https://api.football-data.org/v4/competitions/WC/matches"),auth:"bbcaa923e9bc4b4d93b947c339ccf3b4",parse:"footballdata"}
 ];
 
 function log(msg){var el=document.getElementById("log");el.textContent=new Date().toLocaleTimeString("it-IT")+" - "+msg+"\n"+el.textContent;}
@@ -503,8 +504,9 @@ async function doFetch(){
       log(api.name+" fallito: "+e.message);
     }
   }
-  badge.className="status s-er";badge.textContent="Tutte le API fallite";
-  log("ERRORE: nessuna API raggiungibile. Se sei in un iframe sandbox, apri il file nel browser.");
+  badge.className="status s-er";badge.textContent="Errore: API non raggiungibile";
+  log("ERRORE: nessuna API raggiungibile.");
+  document.getElementById("nextGames").innerHTML='<div style="color:var(--er);padding:16px;text-align:center">API non disponibile. Prova a ricaricare la pagina o riprova tra qualche minuto.</div>';
   btn.disabled=false;
 }
 
