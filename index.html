@@ -410,7 +410,7 @@ function getVenueUtcOffset(game){
   
   // FALLBACK: If no stadium info found, try to determine from the scheduled time itself
   // Log for debugging
-  try{);}catch(e){}
+  
   return 4; // Default EDT
 }
 
@@ -448,7 +448,7 @@ function parseWorldcup26(data){
       }
       // Also live if: not finished, has real scores (at least one goal scored)
       if(!isLive&&hg!==null&&ag!==null&&(hg>0||ag>0)&&finStr!=="TRUE"){
-        isLive=true;:",home,"vs",away,hg+"-"+ag);
+        isLive=true;
       }
     }
     if(home&&away){
