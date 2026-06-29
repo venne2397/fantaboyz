@@ -197,6 +197,8 @@ td{padding:6px}
   <div class="log" id="log"></div>
 </div>
 <script>
+try{
+
 var PLAYERS={
 GA8:[{n:"Germany",t:1,it:"Germania",f:"de"},{n:"Netherlands",t:1,it:"Paesi Bassi",f:"nl"},{n:"Korea Republic",t:2,it:"Corea del Sud",f:"kr"},{n:"Austria",t:2,it:"Austria",f:"at"},{n:"Ivory Coast",t:3,it:"Costa d Avorio",f:"ci"},{n:"Sweden",t:3,it:"Svezia",f:"se"},{n:"Haiti",t:4,it:"Haiti",f:"ht"},{n:"Panama",t:4,it:"Panama",f:"pa"}],
 INSI:[{n:"Argentina",t:1,it:"Argentina",f:"ar"},{n:"England",t:1,it:"Inghilterra",f:"gb-eng"},{n:"Canada",t:2,it:"Canada",f:"ca"},{n:"Senegal",t:2,it:"Senegal",f:"sn"},{n:"Saudi Arabia",t:3,it:"Arabia Saudita",f:"sa"},{n:"Norway",t:3,it:"Norvegia",f:"no"},{n:"Tunisia",t:4,it:"Tunisia",f:"tn"},{n:"Jordan",t:4,it:"Giordania",f:"jo"}],
@@ -901,6 +903,8 @@ document.getElementById("board").innerHTML=h;
 log("App pronta. Apri nel browser e clicca Aggiorna per dati live da worldcup26.ir");
 
 }catch(e){document.getElementById('log').textContent='Init error: '+e.message;}
+
+}catch(_e){}
 </script>
 </body>
 </html>
