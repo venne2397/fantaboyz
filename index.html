@@ -95,9 +95,6 @@ td{padding:6px}
 .brk{grid-template-columns:1fr}
 .bi{padding:6px 10px}
 .bl{font-size:10px}
-.bracket{padding:10px 0}
-.bracket-container{overflow-x:auto}
-.bracket-match{min-width:140px;padding:6px 8px;font-size:10px}
 .emoji-modal{max-width:280px;padding:16px}
 .emoji-grid{grid-template-columns:repeat(6,1fr)}
 .emoji-opt{font-size:18px;padding:4px}
@@ -125,20 +122,6 @@ td{padding:6px}
 .emoji-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:999}
 .powner{font-size:9px;color:var(--wa);margin-left:3px;font-weight:400}
 
-.bracket{overflow-x:auto;padding:20px 0}
-.bracket-round{display:flex;flex-direction:column;justify-content:center;min-width:180px}
-.bracket-container{display:flex;align-items:stretch;gap:0}
-.bracket-match{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;margin:6px 4px;font-size:11px;min-width:160px;position:relative}
-.bracket-match.winner{border-color:var(--ok)}
-.bracket-team{display:flex;align-items:center;justify-content:space-between;padding:3px 0}
-.bracket-team.won{color:var(--ok);font-weight:700}
-.bracket-team.lost{color:var(--tx3);opacity:0.6}
-.bracket-team .bscore{font-family:var(--mn);font-weight:700;min-width:18px;text-align:right}
-.bracket-team .bname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bracket-team .bplayer{font-size:9px;color:var(--wa);margin-left:4px}
-.bracket-round-title{text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;font-weight:600}
-.bracket-connector{width:20px;display:flex;flex-direction:column;justify-content:center;position:relative}
-.bracket-line{border-top:1px solid var(--bd);border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);height:50%;min-height:30px}
 
 .next-games{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:24px}
 .next-games h3{font-size:13px;color:var(--tx2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em}
@@ -176,6 +159,23 @@ td{padding:6px}
 
 .teams-table td{white-space:normal!important;font-size:10px;line-height:1.6}
 .teams-table td img{width:14px!important;margin-right:2px!important}
+
+.bracket{padding:10px 0}
+.bracket-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:10px}
+.bracket-container{display:flex;align-items:stretch;min-width:max-content;padding:10px 0}
+.bracket-round{display:flex;flex-direction:column;min-width:165px;position:relative}
+.bracket-matches{display:flex;flex-direction:column;justify-content:space-around;flex:1}
+.bracket-round-title{text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;font-weight:600}
+.bracket-match{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;margin:4px 4px;font-size:11px;min-width:155px}
+.bracket-match.finished{border-color:var(--ok)}
+.bracket-team{display:flex;align-items:center;justify-content:space-between;padding:2px 0}
+.bracket-team.won{color:var(--ok);font-weight:700}
+.bracket-team.lost{color:var(--tx3);opacity:0.6}
+.bracket-team .bscore{font-family:var(--mn);font-weight:700;min-width:18px;text-align:right}
+.bracket-team .bname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.bracket-team .bplayer{font-size:9px;color:var(--wa);margin-left:4px}
+.bracket-connector{width:24px;position:relative;flex-shrink:0}
+.conn-svg{position:absolute;top:0;left:0}
 </style>
 </head>
 <body>
@@ -797,12 +797,9 @@ setInterval(function(){
 
 function renderBracket(){
   var el=document.getElementById("p-bracket");
-  // Filter knockout matches
   var ko=MATCHES.filter(function(m){return (m.stage||"").toLowerCase().indexOf("group")<0 && m.stage!=="group";});
   
   if(ko.length===0){
-    el.innerHTML='<h2>Fase Eliminazione</h2><p style="color:var(--tx2)">La fase a eliminazione non e ancora iniziata. I match appariranno automaticamente quando inizieranno i knockout.</p><div style="margin-top:20px"><h3>Anteprima Formato</h3><p style="font-size:12px;color:var(--tx3);margin-top:8px">48 squadre &rarr; Round of 32 (32 partite) &rarr; Round of 16 (16) &rarr; Quarti (8) &rarr; Semi (4) &rarr; Finale</p></div>';
-    // Show all teams grouped by player for reference
     var h='<h2>Fase Eliminazione</h2><p style="color:var(--tx2);margin-bottom:16px">La fase a eliminazione non e ancora iniziata.</p>';
     h+='<h3>Squadre in gara per giocatore</h3><div class="brk" style="margin-top:10px">';
     var keys2=Object.keys(PLAYERS);
@@ -817,9 +814,8 @@ function renderBracket(){
     return;
   }
 
-  // Group by stage
   var stages=["LAST_32","ROUND_OF_32","LAST_16","ROUND_OF_16","QUARTER_FINALS","SEMI_FINALS","THIRD_PLACE","FINAL"];
-  var stageLabels={"LAST_32":"R32","ROUND_OF_32":"R32","LAST_16":"R16","ROUND_OF_16":"R16","QUARTER_FINALS":"Quarti","SEMI_FINALS":"Semi","THIRD_PLACE":"3o Posto","FINAL":"Finale"};
+  var stageLabels={"LAST_32":"Sedicesimi","ROUND_OF_32":"Sedicesimi","LAST_16":"Ottavi","ROUND_OF_16":"Ottavi","QUARTER_FINALS":"Quarti","SEMI_FINALS":"Semifinali","THIRD_PLACE":"3° Posto","FINAL":"Finale"};
   
   var rounds=[];
   for(var s=0;s<stages.length;s++){
@@ -828,7 +824,6 @@ function renderBracket(){
       rounds.push({name:stageLabels[stages[s]]||stages[s],matches:stageMatches});
     }
   }
-  // Also catch any with stage names containing keywords
   if(rounds.length===0){
     var grouped={};
     for(var i=0;i<ko.length;i++){
@@ -842,10 +837,18 @@ function renderBracket(){
     }
   }
 
-  var h='<h2>Fase Eliminazione</h2><div class="bracket"><div class="bracket-container">';
+  // Separate 3rd place match
+  var thirdPlace=null;
+  rounds=rounds.filter(function(r){
+    if(r.name==="3° Posto"){thirdPlace=r.matches[0];return false;}
+    return true;
+  });
+
+  var h='<h2>Fase Eliminazione</h2><div class="bracket"><div class="bracket-scroll"><div class="bracket-container">';
+  
   for(var r=0;r<rounds.length;r++){
     var round=rounds[r];
-    h+='<div class="bracket-round"><div class="bracket-round-title">'+round.name+'</div>';
+    h+='<div class="bracket-round" data-round="'+r+'"><div class="bracket-round-title">'+round.name+' ('+round.matches.length+')</div><div class="bracket-matches">';
     for(var i=0;i<round.matches.length;i++){
       var m=round.matches[i];
       var ho=findOwner(m.home),ao=findOwner(m.away);
@@ -853,19 +856,90 @@ function renderBracket(){
       var aWon=m.finished&&m.hg!==null&&m.ag!==null&&m.ag>m.hg;
       var hf=ho?flag(ho.team.f,16):(flagForTeam(m.home)?flag(flagForTeam(m.home),16):"");
       var af=ao?flag(ao.team.f,16):(flagForTeam(m.away)?flag(flagForTeam(m.away),16):"");
-      h+='<div class="bracket-match'+(m.finished?" winner":"")+'">';
-      h+='<div class="bracket-team'+(hWon?" won":"")+(aWon?" lost":"")+'"><span class="bname">'+hf+(m.home||"TBD")+(ho?'<span class="bplayer">'+ho.player+'</span>':'')+'</span><span class="bscore">'+(m.hg!==null?m.hg:"-")+'</span></div>';
-      h+='<div class="bracket-team'+(aWon?" won":"")+(hWon?" lost":"")+'"><span class="bname">'+af+(m.away||"TBD")+(ao?'<span class="bplayer">'+ao.player+'</span>':'')+'</span><span class="bscore">'+(m.ag!==null?m.ag:"-")+'</span></div>';
-      h+='</div>';
+      h+='<div class="bracket-match'+(m.finished?" finished":"")+'"><div class="bracket-team'+(hWon?" won":"")+(aWon?" lost":"")+'"><span class="bname">'+hf+(m.home||"TBD")+(ho?'<span class="bplayer">'+ho.player+'</span>':'')+'</span><span class="bscore">'+(m.hg!==null?m.hg:"-")+'</span></div>';
+      h+='<div class="bracket-team'+(aWon?" won":"")+(hWon?" lost":"")+'"><span class="bname">'+af+(m.away||"TBD")+(ao?'<span class="bplayer">'+ao.player+'</span>':'')+'</span><span class="bscore">'+(m.ag!==null?m.ag:"-")+'</span></div></div>';
     }
-    h+='</div>';
-    // Add connector between rounds (except last)
+    h+='</div></div>';
+    // Draw connector lines between this round and next
     if(r<rounds.length-1){
-      h+='<div class="bracket-connector"></div>';
+      h+='<div class="bracket-connector"><svg class="conn-svg" data-from="'+r+'"></svg></div>';
     }
   }
   h+='</div></div>';
+  
+  // Third place match at the bottom
+  if(thirdPlace){
+    var m=thirdPlace;
+    var ho=findOwner(m.home),ao=findOwner(m.away);
+    var hWon=m.finished&&m.hg!==null&&m.ag!==null&&m.hg>m.ag;
+    var aWon=m.finished&&m.hg!==null&&m.ag!==null&&m.ag>m.hg;
+    var hf=ho?flag(ho.team.f,16):(flagForTeam(m.home)?flag(flagForTeam(m.home),16):"");
+    var af=ao?flag(ao.team.f,16):(flagForTeam(m.away)?flag(flagForTeam(m.away),16):"");
+    h+='<div style="margin-top:16px;max-width:200px"><div class="bracket-round-title">3° Posto</div>';
+    h+='<div class="bracket-match'+(m.finished?" finished":"")+'"><div class="bracket-team'+(hWon?" won":"")+(aWon?" lost":"")+'"><span class="bname">'+hf+(m.home||"TBD")+'</span><span class="bscore">'+(m.hg!==null?m.hg:"-")+'</span></div>';
+    h+='<div class="bracket-team'+(aWon?" won":"")+(hWon?" lost":"")+'"><span class="bname">'+af+(m.away||"TBD")+'</span><span class="bscore">'+(m.ag!==null?m.ag:"-")+'</span></div></div></div>';
+  }
+  
+  h+='</div>';
   el.innerHTML=h;
+  
+  // Draw SVG connector lines after DOM is rendered
+  setTimeout(drawBracketLines,50);
+}
+
+function drawBracketLines(){
+  var svgs=document.querySelectorAll('.conn-svg');
+  for(var s=0;s<svgs.length;s++){
+    var svg=svgs[s];
+    var fromIdx=parseInt(svg.getAttribute('data-from'));
+    var container=svg.parentElement;
+    var prevRound=container.previousElementSibling;
+    var nextRound=container.nextElementSibling;
+    if(!prevRound||!nextRound) continue;
+    
+    var prevMatches=prevRound.querySelectorAll('.bracket-match');
+    var nextMatches=nextRound.querySelectorAll('.bracket-match');
+    
+    // Set SVG size to fill connector
+    var ch=container.parentElement.offsetHeight;
+    svg.setAttribute('width','24');
+    svg.setAttribute('height',ch);
+    svg.style.width='24px';
+    svg.style.height=ch+'px';
+    
+    var containerRect=container.getBoundingClientRect();
+    
+    // For each pair in prev round, draw lines connecting to corresponding match in next round
+    for(var i=0;i<nextMatches.length;i++){
+      var m1=prevMatches[i*2];
+      var m2=prevMatches[i*2+1];
+      var target=nextMatches[i];
+      if(!m1||!target) continue;
+      
+      var m1Rect=m1.getBoundingClientRect();
+      var targetRect=target.getBoundingClientRect();
+      var y1=m1Rect.top+m1Rect.height/2-containerRect.top;
+      var yT=targetRect.top+targetRect.height/2-containerRect.top;
+      
+      // Line from match 1 to middle
+      var path='M0,'+y1+' L12,'+y1+' L12,'+yT+' L24,'+yT;
+      
+      if(m2){
+        var m2Rect=m2.getBoundingClientRect();
+        var y2=m2Rect.top+m2Rect.height/2-containerRect.top;
+        // Line from match 1 to midpoint, match 2 to midpoint, midpoint to target
+        var midY=(y1+y2)/2;
+        path='M0,'+y1+' L10,'+y1+' L10,'+midY+' M0,'+y2+' L10,'+y2+' L10,'+midY+' M10,'+midY+' L24,'+yT;
+      }
+      
+      var p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d',path);
+      p.setAttribute('stroke','var(--bd)');
+      p.setAttribute('stroke-width','1.5');
+      p.setAttribute('fill','none');
+      svg.appendChild(p);
+    }
+  }
 }
 
 function renderRules(){
