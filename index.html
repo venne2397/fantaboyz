@@ -160,7 +160,7 @@ td{padding:6px}
 .rules-table{table-layout:fixed;width:100%;font-size:11px}
 .rules-table th,.rules-table td{text-align:center;padding:6px 4px;white-space:nowrap}
 .rules-table th:first-child,.rules-table td:first-child{text-align:left;width:35%;white-space:normal}
-.rules-table th:not(:first-child),.rules-table td:not(:first-child){width:13%}
+.rules-table th:not(:first-child),.rules-table td:not(:first-child){width:16%}
 @media(max-width:768px){
 .rules-table{font-size:10px}
 .rules-table th,.rules-table td{padding:4px 2px}
@@ -223,7 +223,16 @@ function flag(code,size){
   return '<img src="https://flagcdn.com/'+size+'x'+Math.round(size*0.75)+'/'+code+'.png" width="'+size+'" style="vertical-align:middle;margin-right:4px;border-radius:2px">';
 }
 function flagForTeam(teamName){
-  for(var i=0;i<keys.length;i++){var teams=PLAYERS[keys[i]];for(var j=0;j<teams.length;j++){if(teams[j].n===teamName||teams[j].it===teamName) return teams[j].f;}}
+  if(!teamName) return null;
+  var ln=teamName.toLowerCase().replace(/[^a-z\s]/g,"").trim();
+  for(var i=0;i<keys.length;i++){var teams=PLAYERS[keys[i]];for(var j=0;j<teams.length;j++){
+    var tn=teams[j].n.toLowerCase().replace(/[^a-z\s]/g,"").trim();
+    if(tn===ln||ln.indexOf(tn)>=0||tn.indexOf(ln)>=0) return teams[j].f;
+    var it=teams[j].it.toLowerCase().replace(/[^a-z\s]/g,"").trim();
+    if(it===ln||ln.indexOf(it)>=0||it.indexOf(ln)>=0) return teams[j].f;
+    var aliases=TEAM_ALIASES[teams[j].n];
+    if(aliases){for(var a=0;a<aliases.length;a++){if(aliases[a]===ln||ln.indexOf(aliases[a])>=0||aliases[a].indexOf(ln)>=0) return teams[j].f;}}
+  }}
   return null;
 }
 
@@ -837,8 +846,8 @@ function renderBracket(){
       var ho=findOwner(m.home),ao=findOwner(m.away);
       var hWon=m.finished&&m.hg!==null&&m.ag!==null&&m.hg>m.ag;
       var aWon=m.finished&&m.hg!==null&&m.ag!==null&&m.ag>m.hg;
-      var hf=ho?flag(ho.team.f,12):(flagForTeam(m.home)?flag(flagForTeam(m.home),12):"");
-      var af=ao?flag(ao.team.f,12):(flagForTeam(m.away)?flag(flagForTeam(m.away),12):"");
+      var hf=ho?flag(ho.team.f,16):(flagForTeam(m.home)?flag(flagForTeam(m.home),16):"");
+      var af=ao?flag(ao.team.f,16):(flagForTeam(m.away)?flag(flagForTeam(m.away),16):"");
       h+='<div class="bracket-match'+(m.finished?" winner":"")+'">';
       h+='<div class="bracket-team'+(hWon?" won":"")+(aWon?" lost":"")+'"><span class="bname">'+hf+(m.home||"TBD")+(ho?'<span class="bplayer">'+ho.player+'</span>':'')+'</span><span class="bscore">'+(m.hg!==null?m.hg:"-")+'</span></div>';
       h+='<div class="bracket-team'+(aWon?" won":"")+(hWon?" lost":"")+'"><span class="bname">'+af+(m.away||"TBD")+(ao?'<span class="bplayer">'+ao.player+'</span>':'')+'</span><span class="bscore">'+(m.ag!==null?m.ag:"-")+'</span></div>';
@@ -855,9 +864,9 @@ function renderBracket(){
 }
 
 function renderRules(){
-  var h='<h2>Regole e Punteggi</h2><table class="rules-table"><thead><tr><th>Evento</th><th>Base</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>';
-  h+="<tr><td>Vittoria girone</td><td>2</td><td>2</td><td>3</td><td>4</td><td>6</td></tr><tr><td>Pareggio girone</td><td>1</td><td>1</td><td>1.5</td><td>2</td><td>3</td></tr><tr><td>1o nel girone</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>2o nel girone</td><td>3</td><td>3</td><td>4.5</td><td>6</td><td>9</td></tr><tr><td>Qualif. KO</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Quarti</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Semifinale</td><td>10</td><td>10</td><td>15</td><td>20</td><td>30</td></tr><tr><td>Finale</td><td>15</td><td>15</td><td>22.5</td><td>30</td><td>45</td></tr><tr><td>Campione</td><td>20</td><td>20</td><td>30</td><td>40</td><td>60</td></tr></tbody></table>";
-  h+='<h3 style="margin-top:16px">Squadre per Giocatore</h3><table class="rules-table"><thead><tr><th>Player</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>';
+  var h='<h2>Regole e Punteggi</h2><table class="rules-table"><thead><tr><th>Evento</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>';
+  h+="<tr><td>Vittoria girone</td><td>2</td><td>3</td><td>4</td><td>6</td></tr><tr><td>Pareggio girone</td><td>1</td><td>1.5</td><td>2</td><td>3</td></tr><tr><td>1o nel girone</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>2o nel girone</td><td>3</td><td>4.5</td><td>6</td><td>9</td></tr><tr><td>Qualif. KO</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Quarti</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Semifinale</td><td>10</td><td>15</td><td>20</td><td>30</td></tr><tr><td>Finale</td><td>15</td><td>22.5</td><td>30</td><td>45</td></tr><tr><td>Campione</td><td>20</td><td>30</td><td>40</td><td>60</td></tr></tbody></table>";
+  h+='<h3 style="margin-top:16px">Squadre per Giocatore</h3><table class="rules-table"><thead><tr><th>Giocatore</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>';
 for(var i=0;i<keys.length;i++){var pl=keys[i],teams=PLAYERS[pl];h+="<tr><td style='font-weight:700'>"+pl+"</td>";for(var tier=1;tier<=4;tier++){var ns=[];for(var j=0;j<teams.length;j++){if(teams[j].t===tier)ns.push(flag(teams[j].f)+teams[j].it);}h+="<td>"+ns.join(" ")+"</td>";}h+="</tr>";}
   h+="</tbody></table>";
   document.getElementById("p-rules").innerHTML=h;
