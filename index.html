@@ -410,14 +410,12 @@ function getVenueUtcOffset(game){
   
   // FALLBACK: If no stadium info found, try to determine from the scheduled time itself
   // Log for debugging
-  if(typeof console!=="undefined") console.warn("⚠️ VENUE UNKNOWN - keys:",allKeys.join(","),"| sample values:",searchStr.substring(0,200));
+  try{);}catch(e){}
   return 4; // Default EDT
 }
 
 function parseWorldcup26(data){
   // Debug: log first game object keys/structure
-  var games_temp=data.games||data.data||(Array.isArray(data)?data:[]);
-  if(games_temp.length>0) console.log("🔍 API GAME OBJECT SAMPLE:",JSON.stringify(games_temp[0]));
   
   // worldcup26.ir format
   var matches=[];
@@ -450,11 +448,9 @@ function parseWorldcup26(data){
       }
       // Also live if: not finished, has real scores (at least one goal scored)
       if(!isLive&&hg!==null&&ag!==null&&(hg>0||ag>0)&&finStr!=="TRUE"){
-        isLive=true;
-        console.log("⚽ LIVE (score-based):",home,"vs",away,hg+"-"+ag);
+        isLive=true;:",home,"vs",away,hg+"-"+ag);
       }
     }
-    if(isLive) console.log("⚽ LIVE MATCH:",home,hg,"-",ag,away,"| time:",timeEl);
     if(home&&away){
       var venueOff=getVenueUtcOffset(g);
       matches.push({home:home,away:away,hg:hg,ag:ag,finished:isFinished,live:isLive,stage:stage,group:groupId,date:date,timeElapsed:timeEl,utcOff:venueOff});
@@ -779,14 +775,7 @@ setInterval(function(){
   for(var i=0;i<MATCHES.length;i++){if(MATCHES[i].live){anyLive=true;break;}}
   if(anyLive||MATCHES.length>0) renderNextGames();
 },60000);
-// Also re-fetch data every 90 seconds for live updates
-setInterval(async function(){
-  try{
-    var apis=[{name:"worldcupjson.net",url:"https://worldcupjson.net/matches",parse:"worldcup26"}];
-    var resp=await fetch(apis[0].url);
-    if(resp.ok){var json=await resp.json();MATCHES=parseWorldcup26(json);renderAll();}
-  }catch(e){}
-},90000);
+// Auto re-fetch handled by doFetch + Auto 5min button
 
 function renderBracket(){
   var el=document.getElementById("p-bracket");
