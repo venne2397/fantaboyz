@@ -855,9 +855,9 @@ function renderBracket(){
 }
 
 function renderRules(){
-  var h="<h2>Regole e Punteggi</h2><table class="rules-table"><thead><tr><th>Evento</th><th>Base</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>";
+  var h='<h2>Regole e Punteggi</h2><table class="rules-table"><thead><tr><th>Evento</th><th>Base</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>';
   h+="<tr><td>Vittoria girone</td><td>2</td><td>2</td><td>3</td><td>4</td><td>6</td></tr><tr><td>Pareggio girone</td><td>1</td><td>1</td><td>1.5</td><td>2</td><td>3</td></tr><tr><td>1o nel girone</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>2o nel girone</td><td>3</td><td>3</td><td>4.5</td><td>6</td><td>9</td></tr><tr><td>Qualif. KO</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Quarti</td><td>5</td><td>5</td><td>7.5</td><td>10</td><td>15</td></tr><tr><td>Semifinale</td><td>10</td><td>10</td><td>15</td><td>20</td><td>30</td></tr><tr><td>Finale</td><td>15</td><td>15</td><td>22.5</td><td>30</td><td>45</td></tr><tr><td>Campione</td><td>20</td><td>20</td><td>30</td><td>40</td><td>60</td></tr></tbody></table>";
-  h+="<h3 style='margin-top:16px'>Squadre per Giocatore</h3><table class="rules-table"><thead><tr><th>Player</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>";
+  h+='<h3 style="margin-top:16px">Squadre per Giocatore</h3><table class="rules-table"><thead><tr><th>Player</th><th>1a</th><th>2a</th><th>3a</th><th>4a</th></tr></thead><tbody>';
 for(var i=0;i<keys.length;i++){var pl=keys[i],teams=PLAYERS[pl];h+="<tr><td style='font-weight:700'>"+pl+"</td>";for(var tier=1;tier<=4;tier++){var ns=[];for(var j=0;j<teams.length;j++){if(teams[j].t===tier)ns.push(flag(teams[j].f)+teams[j].it);}h+="<td>"+ns.join(" ")+"</td>";}h+="</tr>";}
   h+="</tbody></table>";
   document.getElementById("p-rules").innerHTML=h;
@@ -891,9 +891,6 @@ function closeEmojiPicker(){
   editingPlayer=null;
 }
 
-try{
-
-
 // Init
 document.getElementById("tabs").innerHTML='<button class="tab on" onclick="switchTab(\'det\',this)">Classifica</button><button class="tab" onclick="switchTab(\'match\',this)">Partite</button><button class="tab" onclick="switchTab(\'bracket\',this)">Eliminazione</button><button class="tab" onclick="switchTab(\'rules\',this)">Regole</button>';
 renderRules();
@@ -904,7 +901,7 @@ var h="";for(var i=0;i<keys.length;i++){h+='<div class="cd"><span class="rk">#'+
 document.getElementById("board").innerHTML=h;
 log("App pronta. Apri nel browser e clicca Aggiorna per dati live da worldcup26.ir");
 
-}catch(e){document.getElementById('log').textContent='Init error: '+e.message;}
+
 
 
 </script>
