@@ -161,20 +161,20 @@ td{padding:6px}
 .teams-table td img{width:14px!important;margin-right:2px!important}
 
 .bkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 0 10px 0}
-.bkt{display:flex;align-items:center;min-width:max-content}
-.bkt-round{min-width:180px;padding:0 4px}
-.bkt-col{display:flex;flex-direction:column;justify-content:space-around;height:100%}
+.bkt{display:flex;align-items:stretch;min-width:max-content}
+.bkt-round{min-width:180px;padding:0 16px;display:flex;flex-direction:column}
+.bkt-col{display:flex;flex-direction:column;justify-content:space-around;flex:1}
 .bkt-rtitle{text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;font-weight:600}
 .bkt-pair{display:flex;flex-direction:column;justify-content:center;padding:4px 0;position:relative;margin:2px 0}
-.bkt-pair.has-line::after{content:'';position:absolute;right:-14px;top:25%;height:50%;border-right:2px solid var(--tx3);opacity:0.3}
-.bkt-pair.has-line::before{content:'';position:absolute;right:-14px;top:50%;width:14px;border-top:2px solid var(--tx3);opacity:0.3}
+.bkt-pair.has-line::after{content:'';position:absolute;right:-14px;top:25%;height:50%;border-right:2px solid var(--bd)}
+.bkt-pair.has-line::before{content:'';position:absolute;right:-14px;top:50%;width:14px;border-top:2px solid var(--bd)}
 .bkt-match{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;margin:3px 0;font-size:11px;position:relative}
 .bkt-match.done{border-color:var(--ok)}
-.bkt-match::before{content:'';position:absolute;left:-14px;top:50%;width:14px;border-top:2px solid var(--tx3);opacity:0.3}
+.bkt-match::before{content:'';position:absolute;left:-14px;top:50%;width:14px;border-top:2px solid var(--bd)}
 .bkt-round:first-child .bkt-match::before{display:none}
 .bkt-team{display:flex;align-items:center;justify-content:space-between;padding:2px 0}
-.bkt-team.won{color:var(--ok);font-weight:700;background:rgba(34,197,94,0.08);border-radius:4px;padding:3px 5px;margin:-3px -5px}
-.bkt-team.lost{color:var(--tx3);opacity:0.6}
+.bkt-team.won .bkt-name{color:var(--ok);font-weight:700}
+.bkt-team.lost{opacity:0.7}
 .bkt-score{font-family:var(--mn);font-weight:700;min-width:18px;text-align:right}
 .bkt-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
 .bkt-pl{font-size:9px;color:var(--wa);margin-left:4px}
@@ -474,10 +474,10 @@ function parseWorldcup26(data){
     }
     if(home&&away){
       var venueOff=getVenueUtcOffset(g);
-      var hp=g.home_penalty!=null?parseInt(g.home_penalty):null;
-      var ap=g.away_penalty!=null?parseInt(g.away_penalty):null;
+      var hp=parseInt(g.home_penalty||g.home_penalties||g.penalty_home||g.home_pen||(g.penalties?g.penalties.home:null));
+      var ap=parseInt(g.away_penalty||g.away_penalties||g.penalty_away||g.away_pen||(g.penalties?g.penalties.away:null));
       if(isNaN(hp))hp=null;if(isNaN(ap))ap=null;
-      var extraTime=(timeEl==="aet"||statusStr==="aet"||g.extra_time==="true"||g.extra_time===true);
+      var extraTime=(timeEl==="aet"||timeEl==="pen"||timeEl==="penalties"||statusStr==="aet"||statusStr==="pen"||g.extra_time==="true"||g.extra_time===true||hp!==null);
       matches.push({home:home,away:away,hg:hg,ag:ag,hp:hp,ap:ap,aet:extraTime,finished:isFinished,live:isLive,stage:stage,group:groupId,date:date,timeElapsed:timeEl,utcOff:venueOff});
     }
   }
@@ -882,7 +882,25 @@ function renderBracket(){
     if(ordered.length===curr.length) rounds[r].matches=ordered;
   }
 
-  var h='<h2>Fase Eliminazione</h2>';
+  
+  // Infer penalty winners for matches where hg==ag in knockout
+  for(var r=0;r<rounds.length-1;r++){
+    var curr=rounds[r].matches;
+    var next=rounds[r+1].matches;
+    for(var c=0;c<curr.length;c++){
+      var cm=curr[c];
+      if(cm.finished&&cm.hg!==null&&cm.ag!==null&&cm.hg===cm.ag&&cm.hp===null){
+        // Draw in knockout - find winner from next round
+        for(var n=0;n<next.length;n++){
+          var nm=next[n];
+          if(norm(nm.home)===norm(cm.home)||norm(nm.away)===norm(cm.home)){cm.hp=-1;cm.ap=-2;break;}
+          if(norm(nm.home)===norm(cm.away)||norm(nm.away)===norm(cm.away)){cm.hp=-2;cm.ap=-1;break;}
+        }
+      }
+    }
+  }
+
+var h='<h2>Fase Eliminazione</h2>';
   h+='<div class="bkt-wrap"><div class="bkt">';
   
   for(var r=0;r<rounds.length;r++){
@@ -933,7 +951,8 @@ function bktMatch(m){
   var aScore=(m.ag!==null?m.ag:'-');
   var extra='';
   if(m.hp!==null&&m.ap!==null){
-    extra='<div class="bkt-extra"><span class="bkt-pen'+(hWon?' pen-home':'')+(aWon?' pen-away':'')+'">rig. '+m.hp+'-'+m.ap+'</span></div>';
+    var penText=(m.hp>=0&&m.ap>=0)?'rig. '+m.hp+'-'+m.ap:'rig.';
+    extra='<div class="bkt-extra"><span class="bkt-pen'+(hWon?' pen-home':'')+(aWon?' pen-away':'')+'">'+penText+'</span></div>';
   } else if(m.aet){
     extra='<div class="bkt-extra"><span class="bkt-pen">d.t.s.</span></div>';
   }
