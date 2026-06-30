@@ -163,15 +163,15 @@ td{padding:6px}
 .bkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 0 10px 0}
 .bkt{display:flex;align-items:stretch;min-width:max-content}
 .bkt-round{min-width:180px;padding:0 16px;display:flex;flex-direction:column}
-.bkt-col{display:flex;flex-direction:column;justify-content:space-around;flex:1}
+.bkt-col{display:flex;flex-direction:column;flex:1}
 .bkt-rtitle{text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;font-weight:600}
-.bkt-pair{display:flex;flex-direction:column;justify-content:center;padding:4px 0;position:relative;margin:2px 0}
-.bkt-pair.has-line::after{content:'';position:absolute;right:-14px;top:25%;height:50%;border-right:2px solid var(--bd)}
-.bkt-pair.has-line::before{content:'';position:absolute;right:-14px;top:50%;width:14px;border-top:2px solid var(--bd)}
+.bkt-pair{display:flex;flex-direction:column;justify-content:center;flex:1;padding:4px 0;position:relative}
+
+
 .bkt-match{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;margin:3px 0;font-size:11px;position:relative}
 .bkt-match.done{border-color:var(--ok)}
-.bkt-match::before{content:'';position:absolute;left:-14px;top:50%;width:14px;border-top:2px solid var(--bd)}
-.bkt-round:first-child .bkt-match::before{display:none}
+
+
 .bkt-team{display:flex;align-items:center;justify-content:space-between;padding:2px 0}
 .bkt-team.won .bkt-name{color:var(--ok);font-weight:700}
 .bkt-team.lost{opacity:0.7}
@@ -180,6 +180,11 @@ td{padding:6px}
 .bkt-pl{font-size:9px;color:var(--wa);margin-left:4px}
 .bkt-pen{font-size:9px;color:var(--tx3);font-style:italic}.bkt-pen.pen-home::before{content:'\2713 ';color:var(--ok);font-weight:700}.bkt-pen.pen-away::after{content:' \2713';color:var(--ok);font-weight:700}
 .bkt-extra{text-align:center;padding-top:2px;border-top:1px solid var(--bd);margin-top:3px}
+
+.bkt-pair.has-line::after{content:'';position:absolute;right:-16px;top:25%;height:50%;border-right:2px solid var(--bd)}
+.bkt-pair.has-line::before{content:'';position:absolute;right:-16px;top:50%;width:16px;height:0;border-top:2px solid var(--bd)}
+.bkt-round:not(:first-child) .bkt-match::before{content:'';position:absolute;left:-16px;top:50%;width:16px;height:0;border-top:2px solid var(--bd)}
+.bkt-match.tbd{opacity:0.4;border-style:dashed}
 </style>
 </head>
 <body>
@@ -474,9 +479,12 @@ function parseWorldcup26(data){
     }
     if(home&&away){
       var venueOff=getVenueUtcOffset(g);
-      var hp=parseInt(g.home_penalty||g.home_penalties||g.penalty_home||g.home_pen||(g.penalties?g.penalties.home:null));
-      var ap=parseInt(g.away_penalty||g.away_penalties||g.penalty_away||g.away_pen||(g.penalties?g.penalties.away:null));
+      var hp=parseInt(g.home_penalty||g.home_penalties||g.penalty_home||g.home_pen||g.home_score_penalties||(g.penalties?g.penalties.home:null)||(g.score_penalties?g.score_penalties.home:null));
+      var ap=parseInt(g.away_penalty||g.away_penalties||g.penalty_away||g.away_pen||g.away_score_penalties||(g.penalties?g.penalties.away:null)||(g.score_penalties?g.score_penalties.away:null));
       if(isNaN(hp))hp=null;if(isNaN(ap))ap=null;
+      // Try parsing from result string like "1(4)-(3)1"
+      if(hp===null&&g.home_score_extra!=null){hp=parseInt(g.home_score_extra);if(isNaN(hp))hp=null;}
+      if(ap===null&&g.away_score_extra!=null){ap=parseInt(g.away_score_extra);if(isNaN(ap))ap=null;}
       var extraTime=(timeEl==="aet"||timeEl==="pen"||timeEl==="penalties"||statusStr==="aet"||statusStr==="pen"||g.extra_time==="true"||g.extra_time===true||hp!==null);
       matches.push({home:home,away:away,hg:hg,ag:ag,hp:hp,ap:ap,aet:extraTime,finished:isFinished,live:isLive,stage:stage,group:groupId,date:date,timeElapsed:timeEl,utcOff:venueOff});
     }
@@ -827,6 +835,7 @@ function renderBracket(){
 
   var stageOrder=["LAST_32","ROUND_OF_32","LAST_16","ROUND_OF_16","QUARTER_FINALS","SEMI_FINALS","FINAL"];
   var stageLabels={"LAST_32":"Sedicesimi","ROUND_OF_32":"Sedicesimi","LAST_16":"Ottavi","ROUND_OF_16":"Ottavi","QUARTER_FINALS":"Quarti","SEMI_FINALS":"Semifinali","FINAL":"Finale"};
+  var stageCounts={"LAST_32":16,"ROUND_OF_32":16,"LAST_16":8,"ROUND_OF_16":8,"QUARTER_FINALS":4,"SEMI_FINALS":2,"FINAL":1};
   
   var stageMap={};
   for(var i=0;i<ko.length;i++){
@@ -835,28 +844,44 @@ function renderBracket(){
     stageMap[st].push(ko[i]);
   }
   
-  var rounds=[];
+  // Determine which stages we have data for
+  var activeStages=[];
   for(var s=0;s<stageOrder.length;s++){
-    if(stageMap[stageOrder[s]]){
-      rounds.push({key:stageOrder[s],name:stageLabels[stageOrder[s]]||stageOrder[s],matches:stageMap[stageOrder[s]]});
+    if(stageMap[stageOrder[s]]&&stageMap[stageOrder[s]].length>0){
+      activeStages.push(stageOrder[s]);
     }
   }
-  var usedKeys=rounds.map(function(r){return r.key;});usedKeys.push("THIRD_PLACE");
-  var otherKeys=Object.keys(stageMap).filter(function(k){return usedKeys.indexOf(k)<0;});
-  for(var i=0;i<otherKeys.length;i++){rounds.push({key:otherKeys[i],name:stageLabels[otherKeys[i]]||otherKeys[i],matches:stageMap[otherKeys[i]]});}
+  if(activeStages.length===0) activeStages=Object.keys(stageMap).filter(function(k){return k!=="THIRD_PLACE";});
+  
+  // Build rounds with correct expected match counts
+  var firstStage=activeStages[0];
+  var firstCount=stageCounts[firstStage]||stageMap[firstStage].length;
+  
+  var rounds=[];
+  var expectedCount=firstCount;
+  for(var s=0;s<stageOrder.length;s++){
+    var key=stageOrder[s];
+    if(key===firstStage||rounds.length>0){
+      var realMatches=stageMap[key]||[];
+      rounds.push({key:key,name:stageLabels[key]||key,matches:realMatches,expected:expectedCount});
+      expectedCount=Math.max(1,Math.floor(expectedCount/2));
+      if(expectedCount<1) break;
+    }
+  }
+  // Stop at Final
+  var finalIdx=-1;
+  for(var r=0;r<rounds.length;r++){if(rounds[r].expected===1){finalIdx=r;break;}}
+  if(finalIdx>=0) rounds=rounds.slice(0,finalIdx+1);
 
-  // Order matches within rounds by bracket position:
-  // Use next round to determine ordering of current round.
-  // If next round match has home=X, away=Y, find which current round matches 
-  // have X and Y as participants/winners, and place them adjacent.
+  // Order matches in each round based on next round
   for(var r=0;r<rounds.length-1;r++){
     var curr=rounds[r].matches;
     var next=rounds[r+1].matches;
+    if(next.length===0||curr.length===0) continue;
     var ordered=[];
     var used={};
     for(var n=0;n<next.length;n++){
       var nm=next[n];
-      // Find which current matches feed into this next match
       var feedA=null,feedB=null;
       for(var c=0;c<curr.length;c++){
         if(used[c]) continue;
@@ -866,8 +891,12 @@ function renderBracket(){
           if(!feedA){feedA=c;used[c]=true;}
           else{feedB=c;used[c]=true;break;}
         }
-        // Also check if team names from current match appear in next match
-        if(!winner){
+      }
+      // Also try team name matching if winner not found
+      if(feedA===null||feedB===null){
+        for(var c=0;c<curr.length;c++){
+          if(used[c]) continue;
+          var cm=curr[c];
           if(norm(cm.home)===norm(nm.home)||norm(cm.home)===norm(nm.away)||norm(cm.away)===norm(nm.home)||norm(cm.away)===norm(nm.away)){
             if(!feedA){feedA=c;used[c]=true;}
             else if(!feedB){feedB=c;used[c]=true;break;}
@@ -877,20 +906,17 @@ function renderBracket(){
       if(feedA!==null) ordered.push(curr[feedA]);
       if(feedB!==null) ordered.push(curr[feedB]);
     }
-    // Add any remaining unmatched
     for(var c=0;c<curr.length;c++){if(!used[c]) ordered.push(curr[c]);}
-    if(ordered.length===curr.length) rounds[r].matches=ordered;
+    if(ordered.length>0) rounds[r].matches=ordered;
   }
 
-  
-  // Infer penalty winners for matches where hg==ag in knockout
+  // Infer penalty winners for KO draws
   for(var r=0;r<rounds.length-1;r++){
     var curr=rounds[r].matches;
     var next=rounds[r+1].matches;
     for(var c=0;c<curr.length;c++){
       var cm=curr[c];
       if(cm.finished&&cm.hg!==null&&cm.ag!==null&&cm.hg===cm.ag&&cm.hp===null){
-        // Draw in knockout - find winner from next round
         for(var n=0;n<next.length;n++){
           var nm=next[n];
           if(norm(nm.home)===norm(cm.home)||norm(nm.away)===norm(cm.home)){cm.hp=-1;cm.ap=-2;break;}
@@ -900,7 +926,16 @@ function renderBracket(){
     }
   }
 
-var h='<h2>Fase Eliminazione</h2>';
+  // Pad rounds with TBD placeholders to expected count
+  var tbd={home:'',away:'',hg:null,ag:null,hp:null,ap:null,finished:false,live:false,aet:false};
+  for(var r=0;r<rounds.length;r++){
+    while(rounds[r].matches.length<rounds[r].expected){
+      rounds[r].matches.push(tbd);
+    }
+  }
+
+  // Render
+  var h='<h2>Fase Eliminazione</h2>';
   h+='<div class="bkt-wrap"><div class="bkt">';
   
   for(var r=0;r<rounds.length;r++){
@@ -932,13 +967,16 @@ function norm(s){return s?s.toLowerCase().replace(/[^a-z]/g,""):"";}
 
 function getMatchWinner(m){
   if(!m.finished||m.hg===null||m.ag===null) return null;
-  if(m.hp!==null&&m.ap!==null){return m.hp>m.ap?m.home:m.away;}
+  if(m.hp!==null&&m.ap!==null){return m.hp>m.ap?m.home:(m.ap>m.hp?m.away:null);}
   if(m.hg>m.ag) return m.home;
   if(m.ag>m.hg) return m.away;
-  return null; // draw without pen data
+  return null;
 }
 
 function bktMatch(m){
+  if(!m.home&&!m.away){
+    return '<div class="bkt-match tbd"><div class="bkt-team"><span class="bkt-name" style="color:var(--tx3)">TBD</span><span class="bkt-score">-</span></div><div class="bkt-team"><span class="bkt-name" style="color:var(--tx3)">TBD</span><span class="bkt-score">-</span></div></div>';
+  }
   var ho=findOwner(m.home),ao=findOwner(m.away);
   var hWon=false,aWon=false;
   if(m.finished&&m.hg!==null&&m.ag!==null){
