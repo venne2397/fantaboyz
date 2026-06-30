@@ -833,17 +833,29 @@ function renderBracket(){
     return;
   }
 
-  var stageOrder=["LAST_32","ROUND_OF_32","LAST_16","ROUND_OF_16","QUARTER_FINALS","SEMI_FINALS","FINAL"];
-  var stageLabels={"LAST_32":"Sedicesimi","ROUND_OF_32":"Sedicesimi","LAST_16":"Ottavi","ROUND_OF_16":"Ottavi","QUARTER_FINALS":"Quarti","SEMI_FINALS":"Semifinali","FINAL":"Finale"};
-  var stageCounts={"LAST_32":16,"ROUND_OF_32":16,"LAST_16":8,"ROUND_OF_16":8,"QUARTER_FINALS":4,"SEMI_FINALS":2,"FINAL":1};
+  var stageOrder=["ROUND_OF_32","ROUND_OF_16","QUARTER_FINALS","SEMI_FINALS","FINAL"];
+  var stageLabels={"ROUND_OF_32":"Sedicesimi","ROUND_OF_16":"Ottavi","QUARTER_FINALS":"Quarti","SEMI_FINALS":"Semifinali","FINAL":"Finale"};
+  var stageCounts={"ROUND_OF_32":16,"ROUND_OF_16":8,"QUARTER_FINALS":4,"SEMI_FINALS":2,"FINAL":1};
   
   var stageMap={};
+  var stageNorm=function(s){
+    s=s.toUpperCase().replace(/[\s-]+/g,'_');
+    if(s.indexOf('32')>=0) return 'ROUND_OF_32';
+    if(s.indexOf('16')>=0) return 'ROUND_OF_16';
+    if(s.indexOf('QUARTER')>=0||s.indexOf('QF')>=0||s==='QUARTI') return 'QUARTER_FINALS';
+    if(s.indexOf('SEMI')>=0||s==='SF') return 'SEMI_FINALS';
+    if(s==='FINAL'||s==='FINALS'||s==='FINALE') return 'FINAL';
+    if(s.indexOf('THIRD')>=0||s==='THIRD_PLACE') return 'THIRD_PLACE';
+    return s;
+  };
   for(var i=0;i<ko.length;i++){
-    var st=(ko[i].stage||"").toUpperCase();
+    var st=stageNorm(ko[i].stage||"");
     if(!stageMap[st])stageMap[st]=[];
     stageMap[st].push(ko[i]);
   }
   
+    console.log('Bracket stages found:',Object.keys(stageMap),Object.keys(stageMap).map(function(k){return k+':'+stageMap[k].length;}));
+
   // Determine which stages we have data for
   var activeStages=[];
   for(var s=0;s<stageOrder.length;s++){
@@ -855,6 +867,7 @@ function renderBracket(){
   
   // Build rounds with correct expected match counts
   var firstStage=activeStages[0];
+  if(!firstStage){el.innerHTML='<h2>Fase Eliminazione</h2><p>Stage non riconosciuti: '+Object.keys(stageMap).join(', ')+'</p>';return;}
   var firstCount=stageCounts[firstStage]||stageMap[firstStage].length;
   
   var rounds=[];
@@ -872,6 +885,17 @@ function renderBracket(){
   var finalIdx=-1;
   for(var r=0;r<rounds.length;r++){if(rounds[r].expected===1){finalIdx=r;break;}}
   if(finalIdx>=0) rounds=rounds.slice(0,finalIdx+1);
+
+  // Safety: if no rounds built, show all KO matches in a simple list
+  if(rounds.length===0){
+    var h='<h2>Fase Eliminazione</h2><p style="color:var(--tx2)">'+ko.length+' partite knockout trovate</p>';
+    for(var i=0;i<ko.length;i++){
+      h+=bktMatch(ko[i]);
+    }
+    el.innerHTML=h;
+    return;
+  }
+
 
   // Order matches in each round based on next round
   for(var r=0;r<rounds.length-1;r++){
