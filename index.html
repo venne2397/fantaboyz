@@ -472,6 +472,10 @@ function parseWorldcup26(data){
       if(/[0-9]/.test(timeEl)||timeEl==="ht"||timeEl==="et"||timeEl==="pen"||timeEl==="half time"||timeEl==="extra time"||timeEl==="penalties"||timeEl==="half-time"){
         isLive=true;
       }
+      // Live if status indicates in-progress
+      if(!isLive&&(statusStr==="in_progress"||statusStr==="in progress"||statusStr==="live"||statusStr==="playing"||statusStr==="started"||statusStr==="1h"||statusStr==="2h"||statusStr==="first half"||statusStr==="second half"||statusStr==="half time"||statusStr==="extra time"||statusStr==="ht"||statusStr==="et")){
+        isLive=true;
+      }
       // Also live if: not finished, has real scores (at least one goal scored)
       if(!isLive&&hg!==null&&ag!==null&&(hg>0||ag>0)&&finStr!=="TRUE"){
         isLive=true;
@@ -732,7 +736,8 @@ function renderNextGames(){
     if(!m.date) continue;
     var d=getOfficialKickoff(m.home,m.away)||parseMatchDate(m.date,m.utcOff);
     if(!d) continue;
-    if(d>now) upcoming.push({match:m,date:d});
+    if(d>now){upcoming.push({match:m,date:d});}
+    else if((now-d)<3*60*60*1000){live.push(m);}
   }
   upcoming.sort(function(a,b){return a.date-b.date;});
 
