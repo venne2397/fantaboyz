@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- v7-grid -->
 <title>FantaMondiale 2026</title>
 <style>
 :root{--bg:#0a0e1a;--bg2:#131929;--sf:#1a2236;--sf2:#222d44;--tx:#e8ecf4;--tx2:#9ba8c2;--tx3:#5e6d87;--bd:#2a3650;--bd2:#1e2a40;--pr:#4f8cff;--ok:#34d399;--er:#f87171;--wa:#fbbf24;--gd:#ffd700;--sv:#c0c0c0;--bz:#cd7f32;--fn:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--mn:'SF Mono',Consolas,monospace}
@@ -160,12 +161,12 @@ td{padding:6px}
 .teams-table td{white-space:normal!important;font-size:10px;line-height:1.6}
 .teams-table td img{width:14px!important;margin-right:2px!important}
 
-.bkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 0 10px 0}
-.bkt{display:flex;align-items:stretch;min-width:max-content}
-.bkt-round{min-width:180px;padding:0 16px;display:flex;flex-direction:column}
-.bkt-col{display:flex;flex-direction:column;flex:1}
-.bkt-rtitle{text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;font-weight:600}
-.bkt-pair{display:flex;flex-direction:column;justify-content:center;flex:1;padding:4px 0;position:relative}
+
+
+
+
+
+
 
 
 .bkt-match{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;margin:3px 0;font-size:11px;position:relative}
@@ -181,9 +182,22 @@ td{padding:6px}
 .bkt-pen{font-size:9px;color:var(--tx3);font-style:italic}.bkt-pen.pen-home::before{content:'\2713 ';color:var(--ok);font-weight:700}.bkt-pen.pen-away::after{content:' \2713';color:var(--ok);font-weight:700}
 .bkt-extra{text-align:center;padding-top:2px;border-top:1px solid var(--bd);margin-top:3px}
 
-.bkt-pair.has-line::after{content:'';position:absolute;right:-16px;top:25%;height:50%;border-right:2px solid var(--bd)}
-.bkt-pair.has-line::before{content:'';position:absolute;right:-16px;top:50%;width:16px;height:0;border-top:2px solid var(--bd)}
-.bkt-round:not(:first-child) .bkt-match::before{content:'';position:absolute;left:-16px;top:50%;width:16px;height:0;border-top:2px solid var(--bd)}
+
+
+
+
+
+.bkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 0;min-height:100px}
+.bkt{display:grid;min-width:max-content;column-gap:0;row-gap:0}
+.bkt-rtitle{text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;padding-bottom:8px;font-weight:600;grid-row:1}
+.bkt-cell{display:flex;align-items:center;padding:2px 16px;position:relative;min-height:56px}
+.bkt-cell::before{content:'';position:absolute;left:0;top:50%;width:16px;height:0;border-top:2px solid var(--bd)}
+.bkt-cell.first-round::before{display:none}
+.bkt-cell.last-round::after{display:none}
+.bkt-cell.conn-top::after{content:'';position:absolute;right:0;top:50%;bottom:0;width:16px;border-top:2px solid var(--bd);border-right:2px solid var(--bd);border-bottom:none;border-left:none}
+.bkt-cell.conn-bot::after{content:'';position:absolute;right:0;top:0;bottom:50%;width:16px;border-bottom:2px solid var(--bd);border-right:2px solid var(--bd);border-top:none;border-left:none}
+.bkt-match{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;font-size:11px;min-width:160px;width:100%}
+.bkt-match.done{border-color:var(--ok)}
 .bkt-match.tbd{opacity:0.4;border-style:dashed}
 </style>
 </head>
@@ -865,63 +879,36 @@ function renderBracket(){
 
   var stageOrder=["ROUND_OF_32","ROUND_OF_16","QUARTER_FINALS","SEMI_FINALS","FINAL"];
   var stageLabels={"ROUND_OF_32":"Sedicesimi","ROUND_OF_16":"Ottavi","QUARTER_FINALS":"Quarti","SEMI_FINALS":"Semifinali","FINAL":"Finale"};
-  var stageCounts={"ROUND_OF_32":16,"ROUND_OF_16":8,"QUARTER_FINALS":4,"SEMI_FINALS":2,"FINAL":1};
   
   var stageMap={};
   for(var i=0;i<ko.length;i++){
     var st=(ko[i].stage||"").toUpperCase();
+    if(st==="THIRD_PLACE") continue;
     if(!stageMap[st])stageMap[st]=[];
     stageMap[st].push(ko[i]);
   }
   
-    // Determine which stages we have data for
-  var activeStages=[];
-  for(var s=0;s<stageOrder.length;s++){
-    if(stageMap[stageOrder[s]]&&stageMap[stageOrder[s]].length>0){
-      activeStages.push(stageOrder[s]);
-    }
-  }
-  if(activeStages.length===0) activeStages=Object.keys(stageMap).filter(function(k){return k!=="THIRD_PLACE";});
-  
-  // Build rounds - use actual match count from first round
-  var firstStage=activeStages[0];
-  if(!firstStage){el.innerHTML='<h2>Fase Eliminazione</h2><p>Stage non riconosciuti: '+Object.keys(stageMap).join(', ')+'</p>';return;}
-  var firstCount=stageMap[firstStage].length;
-  
+  // Build rounds from available data
   var rounds=[];
-  var expectedCount=firstCount;
   for(var s=0;s<stageOrder.length;s++){
-    var key=stageOrder[s];
-    if(key===firstStage||rounds.length>0){
-      var realMatches=stageMap[key]||[];
-      rounds.push({key:key,name:stageLabels[key]||key,matches:realMatches,expected:expectedCount});
-      expectedCount=Math.max(1,Math.floor(expectedCount/2));
-      if(expectedCount<1) break;
+    if(stageMap[stageOrder[s]]){
+      rounds.push({key:stageOrder[s],name:stageLabels[stageOrder[s]]||stageOrder[s],matches:stageMap[stageOrder[s]]});
     }
   }
-  // Stop at Final
-  var finalIdx=-1;
-  for(var r=0;r<rounds.length;r++){if(rounds[r].expected===1){finalIdx=r;break;}}
-  if(finalIdx>=0) rounds=rounds.slice(0,finalIdx+1);
-
-  // Safety: if no rounds built, show all KO matches in a simple list
-  if(rounds.length===0){
-    var h='<h2>Fase Eliminazione</h2><p style="color:var(--tx2)">'+ko.length+' partite knockout trovate</p>';
-    for(var i=0;i<ko.length;i++){
-      h+=bktMatch(ko[i]);
-    }
-    el.innerHTML=h;
-    return;
+  // Add unknown stages
+  var usedKeys=rounds.map(function(r){return r.key;});
+  var otherKeys=Object.keys(stageMap).filter(function(k){return usedKeys.indexOf(k)<0;});
+  for(var i=0;i<otherKeys.length;i++){
+    rounds.unshift({key:otherKeys[i],name:otherKeys[i],matches:stageMap[otherKeys[i]]});
   }
+  if(rounds.length===0){el.innerHTML='<h2>Fase Eliminazione</h2><p>Nessuna partita KO trovata</p>';return;}
 
-
-  // Order matches in each round based on next round
+  // Order matches within rounds based on next round connections
   for(var r=0;r<rounds.length-1;r++){
     var curr=rounds[r].matches;
     var next=rounds[r+1].matches;
     if(next.length===0||curr.length===0) continue;
-    var ordered=[];
-    var used={};
+    var ordered=[];var used={};
     for(var n=0;n<next.length;n++){
       var nm=next[n];
       var feedA=null,feedB=null;
@@ -934,7 +921,6 @@ function renderBracket(){
           else{feedB=c;used[c]=true;break;}
         }
       }
-      // Also try team name matching if winner not found
       if(feedA===null||feedB===null){
         for(var c=0;c<curr.length;c++){
           if(used[c]) continue;
@@ -952,53 +938,60 @@ function renderBracket(){
     if(ordered.length>0) rounds[r].matches=ordered;
   }
 
-  // Infer penalty winners for KO draws
-  for(var r=0;r<rounds.length-1;r++){
-    var curr=rounds[r].matches;
-    var next=rounds[r+1].matches;
-    for(var c=0;c<curr.length;c++){
-      var cm=curr[c];
-      if(cm.finished&&cm.hg!==null&&cm.ag!==null&&cm.hg===cm.ag&&cm.hp===null){
-        for(var n=0;n<next.length;n++){
-          var nm=next[n];
-          if(norm(nm.home)===norm(cm.home)||norm(nm.away)===norm(cm.home)){cm.hp=-1;cm.ap=-2;break;}
-          if(norm(nm.home)===norm(cm.away)||norm(nm.away)===norm(cm.away)){cm.hp=-2;cm.ap=-1;break;}
-        }
-      }
-    }
-  }
+  // Determine grid dimensions
+  var baseCount=rounds[0].matches.length; // e.g. 16 for R32
+  var numCols=rounds.length;
+  var numRows=baseCount; // number of row "slots"
 
-  // Pad later rounds with TBD placeholders for alignment (skip first round)
+  // Pad later rounds with TBD to expected count
   var tbd={home:'',away:'',hg:null,ag:null,hp:null,ap:null,finished:false,live:false,aet:false};
-  for(var r=1;r<rounds.length;r++){
-    while(rounds[r].matches.length<rounds[r].expected){
-      rounds[r].matches.push(tbd);
-    }
+  var expected=baseCount;
+  for(var r=0;r<rounds.length;r++){
+    var exp=(r===0)?baseCount:Math.max(1,Math.ceil(baseCount/Math.pow(2,r)));
+    while(rounds[r].matches.length<exp) rounds[r].matches.push(tbd);
+    rounds[r].expected=exp;
   }
 
-  // Render
+  // Build grid HTML
   var h='<h2>Fase Eliminazione</h2>';
-  h+='<div class="bkt-wrap"><div class="bkt">';
+  h+='<div class="bkt-wrap"><div class="bkt" style="grid-template-columns:repeat('+numCols+',auto);grid-template-rows:auto repeat('+numRows+',1fr)">';
   
+  // Header row
+  for(var r=0;r<rounds.length;r++){
+    h+='<div class="bkt-rtitle" style="grid-column:'+(r+1)+'">'+rounds[r].name+'</div>';
+  }
+  
+  // Match cells
   for(var r=0;r<rounds.length;r++){
     var round=rounds[r];
+    var span=Math.pow(2,r); // R32:1, R16:2, QF:4, SF:8, F:16
+    var isFirst=(r===0);
     var isLast=(r===rounds.length-1);
-    h+='<div class="bkt-round"><div class="bkt-rtitle">'+round.name+'</div><div class="bkt-col">';
-    for(var i=0;i<round.matches.length;i+=2){
-      var m1=round.matches[i];
-      var m2=round.matches[i+1];
-      h+='<div class="bkt-pair'+(isLast?'':' has-line')+'">';
-      h+=bktMatch(m1);
-      if(m2) h+=bktMatch(m2);
+    
+    for(var i=0;i<round.matches.length;i++){
+      var m=round.matches[i];
+      var rowStart=2+(i*span); // +2 because row 1 is headers
+      var rowEnd=rowStart+span;
+      var cls='bkt-cell';
+      if(isFirst) cls+=' first-round';
+      if(isLast) cls+=' last-round';
+      // Connector lines: odd matches (0,2,4..) connect down, even (1,3,5..) connect up
+      if(!isLast){
+        if(i%2===0) cls+=' conn-top';
+        else cls+=' conn-bot';
+      }
+      h+='<div class="'+cls+'" style="grid-column:'+(r+1)+';grid-row:'+rowStart+'/'+rowEnd+'">';
+      h+=bktMatch(m);
       h+='</div>';
     }
-    h+='</div></div>';
   }
+  
   h+='</div></div>';
   
-  var tp=stageMap["THIRD_PLACE"];
-  if(tp&&tp.length>0){
-    h+='<div style="margin-top:20px;max-width:220px"><div class="bkt-rtitle">3\u00b0 Posto</div>';
+  // Third place
+  var tp=ko.filter(function(m){return (m.stage||"").toUpperCase()==="THIRD_PLACE";});
+  if(tp.length>0){
+    h+='<div style="margin-top:20px;max-width:220px"><div class="bkt-rtitle" style="text-align:left">3\u00b0 Posto</div>';
     h+=bktMatch(tp[0]);
     h+='</div>';
   }
