@@ -455,6 +455,7 @@ function parseWorldcup26(data){
     if(isNaN(hg)) hg=null;
     if(isNaN(ag)) ag=null;
     var stage=g.type||g.round||"group";
+    if(stage.toLowerCase().indexOf("group")<0){var sn=stage.toUpperCase().replace(/[\s-]+/g,"_");if(sn.indexOf("32")>=0)stage="ROUND_OF_32";else if(sn.indexOf("16")>=0)stage="ROUND_OF_16";else if(sn.indexOf("QUARTER")>=0||sn.indexOf("QF")>=0)stage="QUARTER_FINALS";else if(sn.indexOf("SEMI")>=0)stage="SEMI_FINALS";else if(sn==="FINAL"||sn==="FINALS")stage="FINAL";else if(sn.indexOf("THIRD")>=0)stage="THIRD_PLACE";}
     var groupId=(g.group||"").toString().toUpperCase();
     var date=g.datetime||g.local_date||g.date||g.utc_date||"";
     
@@ -553,7 +554,30 @@ function toggleAuto(){
   else{doFetch();autoInterval=setInterval(doFetch,300000);btn.textContent="\u23F8 Stop Auto";}
 }
 
+
+function inferPenaltyWinners(){
+  var ko=MATCHES.filter(function(m){return (m.stage||"").toLowerCase().indexOf("group")<0&&m.stage!=="group";});
+  for(var i=0;i<ko.length;i++){
+    var m=ko[i];
+    if(!m.finished||m.hg===null||m.ag===null||m.hg!==m.ag) continue;
+    if(m.hp!==null) continue; // already has pen data
+    // Find winner in next round
+    for(var j=0;j<ko.length;j++){
+      if(i===j) continue;
+      var nm=ko[j];
+      var mhNorm=m.home?m.home.toLowerCase().replace(/[^a-z]/g,""):"";
+      var maNorm=m.away?m.away.toLowerCase().replace(/[^a-z]/g,""):"";
+      var nhNorm=nm.home?nm.home.toLowerCase().replace(/[^a-z]/g,""):"";
+      var naNorm=nm.away?nm.away.toLowerCase().replace(/[^a-z]/g,""):"";
+      if(nhNorm===mhNorm||naNorm===mhNorm){m.hp=-1;m.ap=-2;break;}
+      if(nhNorm===maNorm||naNorm===maNorm){m.hp=-2;m.ap=-1;break;}
+    }
+  }
+}
+
 function calcPoints(){
+  // Infer penalty winners for KO draws using next-round data
+  inferPenaltyWinners();
   var scores={},det={};
   var played={};
   for(var i=0;i<keys.length;i++){scores[keys[i]]=0;det[keys[i]]=[];played[keys[i]]=0;}
@@ -582,9 +606,10 @@ function calcPoints(){
       if(!m.finished) continue;
       var stg=(m.stage||"").toLowerCase();
       var winner=null;
-      if(m.hg>m.ag) winner=m.home;
+      if(m.hp!==null&&m.ap!==null){winner=m.hp>m.ap?m.home:(m.ap>m.hp?m.away:null);}
+      else if(m.hg>m.ag) winner=m.home;
       else if(m.ag>m.hg) winner=m.away;
-      if(!winner) continue; // draws in KO go to pens - winner unclear without pen data
+      if(!winner) continue;
       var wo=findOwner(winner);
       if(wo){
         var mul=MULT[wo.team.t];
@@ -593,7 +618,7 @@ function calcPoints(){
         if(stg.indexOf("32")>=0||stg.indexOf("r32")>=0){bonus=5;label="Qualificazione Ottavi";}
         else if(stg.indexOf("16")>=0||stg.indexOf("r16")>=0||stg.indexOf("last_16")>=0){bonus=5;label="Quarti di finale";}
         else if(stg.indexOf("quarter")>=0||stg.indexOf("quart")>=0){bonus=10;label="Semifinale";}
-        else if(stg.indexOf("semi")>=0&&stg.indexOf("final")<0){bonus=15;label="Finale";}
+        else if(stg.indexOf("semi")>=0){bonus=15;label="Finale";}
         else if(stg.indexOf("final")>=0&&stg.indexOf("semi")<0){bonus=20;label="CAMPIONE DEL MONDO!";}
         if(bonus>0){var p=bonus*mul;scores[wo.player]+=p;det[wo.player].push({tm:wo.team.it,ev:label,p:p});}
       }
@@ -843,25 +868,13 @@ function renderBracket(){
   var stageCounts={"ROUND_OF_32":16,"ROUND_OF_16":8,"QUARTER_FINALS":4,"SEMI_FINALS":2,"FINAL":1};
   
   var stageMap={};
-  var stageNorm=function(s){
-    s=s.toUpperCase().replace(/[\s-]+/g,'_');
-    if(s.indexOf('32')>=0) return 'ROUND_OF_32';
-    if(s.indexOf('16')>=0) return 'ROUND_OF_16';
-    if(s.indexOf('QUARTER')>=0||s.indexOf('QF')>=0||s==='QUARTI') return 'QUARTER_FINALS';
-    if(s.indexOf('SEMI')>=0||s==='SF') return 'SEMI_FINALS';
-    if(s==='FINAL'||s==='FINALS'||s==='FINALE') return 'FINAL';
-    if(s.indexOf('THIRD')>=0||s==='THIRD_PLACE') return 'THIRD_PLACE';
-    return s;
-  };
   for(var i=0;i<ko.length;i++){
-    var st=stageNorm(ko[i].stage||"");
+    var st=(ko[i].stage||"").toUpperCase();
     if(!stageMap[st])stageMap[st]=[];
     stageMap[st].push(ko[i]);
   }
   
-    console.log('Bracket stages found:',Object.keys(stageMap),Object.keys(stageMap).map(function(k){return k+':'+stageMap[k].length;}));
-
-  // Determine which stages we have data for
+    // Determine which stages we have data for
   var activeStages=[];
   for(var s=0;s<stageOrder.length;s++){
     if(stageMap[stageOrder[s]]&&stageMap[stageOrder[s]].length>0){
@@ -870,10 +883,10 @@ function renderBracket(){
   }
   if(activeStages.length===0) activeStages=Object.keys(stageMap).filter(function(k){return k!=="THIRD_PLACE";});
   
-  // Build rounds with correct expected match counts
+  // Build rounds - use actual match count from first round
   var firstStage=activeStages[0];
   if(!firstStage){el.innerHTML='<h2>Fase Eliminazione</h2><p>Stage non riconosciuti: '+Object.keys(stageMap).join(', ')+'</p>';return;}
-  var firstCount=stageCounts[firstStage]||stageMap[firstStage].length;
+  var firstCount=stageMap[firstStage].length;
   
   var rounds=[];
   var expectedCount=firstCount;
@@ -955,9 +968,9 @@ function renderBracket(){
     }
   }
 
-  // Pad rounds with TBD placeholders to expected count
+  // Pad later rounds with TBD placeholders for alignment (skip first round)
   var tbd={home:'',away:'',hg:null,ag:null,hp:null,ap:null,finished:false,live:false,aet:false};
-  for(var r=0;r<rounds.length;r++){
+  for(var r=1;r<rounds.length;r++){
     while(rounds[r].matches.length<rounds[r].expected){
       rounds[r].matches.push(tbd);
     }
